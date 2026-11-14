@@ -17,7 +17,9 @@ findings in ten pages often trace back to **one** `IconButton` component.
 
 ## 2. Map the component layer
 
-Most real-world a11y bugs live in shared components the scanner treats as opaque.
+Most real-world a11y bugs live in shared components. The scanner follows imports inside the
+project for form labels (thin `<Input>` wrappers, `<Field>` wrappers) and knows the label props
+of common design-system inputs; everything else about a component is opaque to it.
 
 1. Find the design-system / UI folder (`components/ui`, `src/lib/components`, `packages/ui`).
 2. For each primitive that renders an interactive element (`Button`, `IconButton`, `Link`,

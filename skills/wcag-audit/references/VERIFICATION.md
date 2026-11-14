@@ -23,7 +23,7 @@ each one wrong**. Only findings that survive become `confirmed`.
 | --- | --- |
 | `img-alt` | the element is not an `<img>` in the DOM (custom component), or a wrapper sets `alt` |
 | `img-alt-meaningful` | the "vague" word *is* the content (e.g. a logo whose alt is the company name) |
-| `form-label` | a parent component renders `<label for>` with the same id, or `aria-labelledby` is set elsewhere |
+| `form-label` | a parent component renders `<label for>` with the same id, or `aria-labelledby` is set elsewhere; for a wrapper or design-system input, the label is injected another way (context, `cloneElement`, a form library that sets `id`) — check the rendered DOM |
 | `button-name` / `link-name` | a child component renders visible text or `sr-only` text; the icon component sets `aria-label` |
 | `no-div-button` | the handler only stops propagation / the real control is a child `<button>` |
 | `anchor-is-button` | a router intercepts and the `href` is real at runtime |

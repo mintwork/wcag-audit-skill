@@ -8,7 +8,8 @@ import { type ElementNode, type Framework, type ParsedDocument, truncate } from 
 import { walk } from "./helpers.js";
 import { parseMarkup } from "./parse-html.js";
 import { parseJsx } from "./parse-jsx.js";
-import { type Report, type RuleContext, rules } from "./rules.js";
+import { type ComponentResolver, createResolver } from "./resolve.js";
+import { type Report, type ResolvedComponent, type RuleContext, rules } from "./rules.js";
 
 export const SUPPORTED_EXTENSIONS: Record<string, Framework> = {
   ".html": "html",
@@ -30,6 +31,11 @@ export interface StaticOptions {
   /** Only run these rule ids. */
   rules?: string[];
   cwd?: string;
+  /**
+   * Finds components imported from other files (labels from an imported <Field>, a thin <Input> wrapper).
+   * scanStatic creates one for the project; without it, only components defined in the same file are seen.
+   */
+  resolver?: ComponentResolver;
 }
 
 export function parseFile(file: string, source: string): ParsedDocument | undefined {
@@ -43,9 +49,20 @@ export function parseFile(file: string, source: string): ParsedDocument | undefi
   return parseMarkup(file, source, fw);
 }
 
+/** Parse, reusing (and filling) the resolver's cache of JSX documents. */
+function parseShared(file: string, absFile: string, source: string, resolver: ComponentResolver | undefined): ParsedDocument | undefined {
+  if (!resolver || SUPPORTED_EXTENSIONS[path.extname(file).toLowerCase()] !== "jsx") return parseFile(file, source);
+  const cached = resolver.docs.get(absFile);
+  if (cached && cached.source === source) return { ...cached, file };
+  const doc = parseFile(file, source);
+  if (doc) resolver.docs.set(absFile, { ...doc, file: absFile });
+  return doc;
+}
+
 /** Analyze an in-memory source string. `file` determines the parser (by extension). */
 export function analyzeSource(file: string, source: string, opts: StaticOptions = {}): Finding[] {
-  const doc = parseFile(file, source);
+  const absFile = path.resolve(opts.cwd ?? process.cwd(), file);
+  const doc = parseShared(file, absFile, source, opts.resolver);
   if (!doc) return [];
   if (/wcag-audit-ignore-file/.test(source)) return [];
   const lines = source.split("\n");
@@ -53,12 +70,30 @@ export function analyzeSource(file: string, source: string, opts: StaticOptions 
   let hasDynamicLabelTarget = false;
   const all = [...walk(doc.root)];
   for (const el of all) {
-    if (el.tag !== "label") continue;
+    // <label for>, and label components that render one: <Label htmlFor> (shadcn, Radix), <FormLabel>, <FieldLabel>.
+    if (el.tag !== "label" && !(el.isComponent && /Label$/.test(el.tag))) continue;
     const f = el.attrs.get("for");
     if (!f) continue;
     if (f.dynamic) hasDynamicLabelTarget = true;
     else if (f.value) labelTargets.add(f.value);
   }
+
+  const resolved = new Map<string, ResolvedComponent | undefined>();
+  /** A component's definition: in this file, or (with a resolver) in the file it is imported from. */
+  const resolveComponent = (el: ElementNode): ResolvedComponent | undefined => {
+    if (!el.isComponent) return undefined;
+    if (resolved.has(el.tag)) return resolved.get(el.tag);
+    let hit: ResolvedComponent | undefined;
+    const local = doc.components?.get(el.tag);
+    if (local?.length) hit = { trees: local, file: undefined, doc };
+    else if (opts.resolver && !el.tag.includes(".")) {
+      const imp = doc.modules?.imports.get(el.tag);
+      const def = imp && opts.resolver.resolve(absFile, imp);
+      if (def) hit = { trees: def.trees, file: path.relative(opts.cwd ?? process.cwd(), def.file).split(path.sep).join("/"), doc: def.doc };
+    }
+    resolved.set(el.tag, hit);
+    return hit;
+  };
 
   const out: Finding[] = [];
   const active = opts.rules?.length ? rules.filter((r) => opts.rules!.includes(r.meta.id)) : rules;
@@ -67,6 +102,7 @@ export function analyzeSource(file: string, source: string, opts: StaticOptions 
       doc,
       labelTargets,
       hasDynamicLabelTarget,
+      resolveComponent,
       report: (r: Report) => {
         if (isSuppressed(lines, r.el, rule.meta.id)) return;
         out.push(toFinding(doc, rule.meta, r));
@@ -153,13 +189,15 @@ export async function scanStatic(target: string, opts: StaticOptions = {}): Prom
   const cwd = opts.cwd ?? process.cwd();
   const files = await collectFiles(path.resolve(cwd, target), opts.ignore);
   const findings: Finding[] = [];
+  const absTarget = path.resolve(cwd, target);
+  const resolver = opts.resolver ?? createResolver(path.relative(cwd, absTarget).startsWith("..") ? absTarget : cwd);
   for (const abs of files) {
     const source = await readFile(abs, "utf8");
     if (source.length > 2_000_000) continue;
     // Outside cwd, a "../../.." path is useless in reports and SARIF; use the absolute path instead.
     const relative = path.relative(cwd, abs);
     const rel = (relative.startsWith("..") || path.isAbsolute(relative) ? abs : relative).split(path.sep).join("/") || path.basename(abs);
-    findings.push(...analyzeSource(rel, source, opts));
+    findings.push(...analyzeSource(rel, source, { ...opts, cwd, resolver }));
   }
   return {
     tool: TOOL,

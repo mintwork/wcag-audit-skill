@@ -8,6 +8,22 @@ within a minor line.
 
 ## [Unreleased]
 
+### Added
+
+- **Labels resolved across files** (`form-label`): components imported from the project are looked up through
+  relative imports, tsconfig / jsconfig `paths` and workspace packages. A thin wrapper that forwards its props to
+  one `<input>` / `<select>` / `<textarea>` (shadcn's `<Input>`) is checked at each call site, and an imported
+  `<Field>` wrapper whose `<label>` is not associated is reported, both at medium confidence.
+- **Design-system inputs** (`form-label`, medium confidence): MUI `<TextField>` without `label`, antd `<Input>`
+  outside `<Form.Item label>`, Mantine, Chakra, React Aria, HeroUI, React Bootstrap, Fluent UI and Headless UI
+  inputs without their label prop or wrapper.
+
+### Fixed
+
+- `<Label htmlFor>`, `<FormLabel htmlFor>`, `<FieldLabel htmlFor>` (shadcn, Radix, design systems) now associate a
+  label like `<label for>`; `antd` `<Form.Item>`, `<FormControl>`, `<FormGroup>` and `<Input.Wrapper>` count as
+  label wrappers, so controls inside them are no longer reported.
+
 ## [0.1.2] - 2026-11-14
 
 ### Changed
