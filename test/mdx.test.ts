@@ -26,6 +26,8 @@ describe("MDX", () => {
 
   it("treats inline code in link text as text, and skips fenced code (``` and ~~~, longer fences)", () => {
     expect(run("Use [`@source inline()`](/docs/source).")).toEqual([]);
+    expect(run("Literal ``a ` <img src=x> b`` and `<img>` and unclosed ` <img src=y alt=\"\">")).toEqual([]);
+    expect(analyzeSource("long.mdx", "`".repeat(50_000) + "x")).toEqual([]); // linear time
     expect(run("~~~~\n<img src=x>\n~~~\nstill code <img src=y>\n~~~~\n\nafter")).toEqual([]);
   });
 

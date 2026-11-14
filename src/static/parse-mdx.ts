@@ -54,7 +54,7 @@ export function prepareMdx(source: string): string {
 function rewriteInline(line: string): string {
   // Inline code, then autolinks: content is text, never markup.
   // Inline code renders as text: keep it as plain letters so `[`code`](url)` still has link text.
-  let out = line.replace(/(`+)([\s\S]*?)\1/g, (m) => m.replace(/[^\s]/g, "x"));
+  let out = maskInlineCode(line);
   out = out.replace(/<((https?|mailto|ftp):[^>\s]*)>/gi, (m) => blank(m));
   // ATX heading.
   const h = /^(\s{0,3})(#{1,6})\s+(.*?)(\s+#+)?\s*$/.exec(out);
@@ -62,6 +62,39 @@ function rewriteInline(line: string): string {
   // Images ![alt](src "title") and links [text](href "title"). Reference links are left alone.
   out = out.replace(/!\[([^\]]*)\]\(\s*<?([^)\s>]*)>?(?:\s+["'][^"']*["'])?\s*\)/g, (_m, alt: string, src: string) => `<img src="${attrText(src)}" alt="${attrText(alt)}">`);
   out = out.replace(/(^|[^\\!])\[([^\]]*)\]\(\s*<?([^)\s>]*)>?(?:\s+["'][^"']*["'])?\s*\)/g, (_m, pre: string, text: string, href: string) => `${pre}<a href="${attrText(href)}">${text}</a>`);
+  return out;
+}
+
+/** Replaces inline code spans (`a`, ``a ` b``) with letters, in linear time. */
+function maskInlineCode(line: string): string {
+  let out = "";
+  let i = 0;
+  while (i < line.length) {
+    if (line[i] !== "`") {
+      const next = line.indexOf("`", i);
+      const stop = next === -1 ? line.length : next;
+      out += line.slice(i, stop);
+      i = stop;
+      continue;
+    }
+    let run = i;
+    while (line[run] === "`") run++;
+    const fence = line.slice(i, run);
+    // The span closes at the next run of exactly the same length.
+    let close = line.indexOf(fence, run);
+    while (close !== -1 && (line[close + fence.length] === "`" || line[close - 1] === "`")) {
+      let skip = close;
+      while (line[skip] === "`") skip++;
+      close = line.indexOf(fence, skip);
+    }
+    if (close === -1) {
+      out += fence;
+      i = run;
+      continue;
+    }
+    out += line.slice(i, close + fence.length).replace(/\S/g, "x");
+    i = close + fence.length;
+  }
   return out;
 }
 
