@@ -8,6 +8,13 @@ within a minor line.
 
 ## [Unreleased]
 
+### Added
+
+- **Baseline file**: `scan --write-baseline` records the current findings in `.wcag-audit/baseline.json`
+  (or the `--baseline <file>` path); `scan --baseline <file>` then reports and fails only on findings that
+  are not in it. Matching uses the stable finding ids. A `--json` report also works as a baseline. The JSON
+  summary gains `baselined`, and the GitHub Action a `baseline` input.
+
 ## [0.1.2] - 2026-11-14
 
 ### Changed
