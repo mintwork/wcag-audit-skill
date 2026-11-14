@@ -55,8 +55,67 @@ window.__wcagAudit = {
       inModal: !!el.closest('[aria-modal="true"], dialog[open]'),
     };
   },
+  // The helpers below take a selector as a data argument (page.evaluate(fn, selector)); selectors are
+  // never spliced into code strings.
+  styleAt(sel) {
+    const el = document.querySelector(sel);
+    return el ? this.styleOf(el) : null;
+  },
+  refocusedStyleAt(sel) {
+    const el = document.querySelector(sel);
+    if (!el) return null;
+    el.focus({ focusVisible: true });
+    const s = this.styleOf(el);
+    el.blur();
+    return s;
+  },
+  focus(sel) {
+    document.querySelector(sel)?.focus();
+  },
+  focusVisible(sel) {
+    const el = document.querySelector(sel);
+    el?.focus({ focusVisible: true });
+    return !!el && document.activeElement === el;
+  },
+  isActive(sel) {
+    return document.activeElement === document.querySelector(sel);
+  },
+  blur(sel) {
+    document.querySelector(sel)?.blur();
+  },
+  /** The element (or, if it has no box, e.g. a visually hidden radio, its nearest boxed ancestor) plus a margin for rings. */
+  clipAround(sel) {
+    let el = document.querySelector(sel);
+    if (!el) return null;
+    let r = el.getBoundingClientRect();
+    while ((r.width < 4 || r.height < 4) && el.parentElement) { el = el.parentElement; r = el.getBoundingClientRect(); }
+    const pad = 16, vw = innerWidth, vh = innerHeight;
+    const x = Math.max(0, r.left - pad), y = Math.max(0, r.top - pad);
+    const w = Math.min(vw, r.right + pad) - x, h = Math.min(vh, r.bottom + pad) - y;
+    return w >= 2 && h >= 2 ? { x, y, width: w, height: h } : null;
+  },
 };
 `;
+
+interface Clip {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** Type of the helpers installed by PAGE_HELPERS, for functions passed to page.evaluate (which run in the page). */
+interface PageWindow {
+  __wcagAudit: {
+    styleAt(sel: string): string | null;
+    refocusedStyleAt(sel: string): string | null;
+    focus(sel: string): void;
+    focusVisible(sel: string): boolean;
+    isActive(sel: string): boolean;
+    blur(sel: string): void;
+    clipAround(sel: string): Clip | null;
+  };
+}
 
 export interface KeyboardOptions {
   maxTabs?: number;
@@ -123,14 +182,10 @@ export async function keyboardAudit(page: Page, url: string, opts: KeyboardOptio
   for (const s of seq) if (s && !unique.has(s.selector)) unique.set(s.selector, s);
   await page.evaluate("document.activeElement && document.activeElement.blur && document.activeElement.blur()");
   for (const stop of unique.values()) {
-    const blurred = (await page.evaluate(
-      `(() => { const el = document.querySelector(${JSON.stringify(stop.selector)}); return el ? window.__wcagAudit.styleOf(el) : null; })()`,
-    )) as string | null;
+    const blurred = await page.evaluate((sel) => (globalThis as unknown as PageWindow).__wcagAudit.styleAt(sel), stop.selector);
     if (blurred === null || blurred !== stop.style) continue;
     // Verification: focus it again via keyboard-like focus and re-measure once.
-    const refocused = (await page.evaluate(
-      `(() => { const el = document.querySelector(${JSON.stringify(stop.selector)}); if (!el) return null; el.focus({ focusVisible: true }); const s = window.__wcagAudit.styleOf(el); el.blur(); return s; })()`,
-    )) as string | null;
+    const refocused = await page.evaluate((sel) => (globalThis as unknown as PageWindow).__wcagAudit.refocusedStyleAt(sel), stop.selector);
     if (refocused !== null && refocused !== blurred) continue;
     candidates.push(stop);
   }
@@ -169,31 +224,21 @@ const SETTLE_MS = 200;
  */
 async function focusChangesPixels(page: Page, selector: string, prevSelector?: string): Promise<"changed" | "unchanged" | "unknown"> {
   try {
-    const sel = JSON.stringify(selector);
     let focused = false;
     if (prevSelector) {
-      await page.evaluate(`document.querySelector(${JSON.stringify(prevSelector)})?.focus()`);
+      await page.evaluate((sel) => (globalThis as unknown as PageWindow).__wcagAudit.focus(sel), prevSelector);
       await page.keyboard.press("Tab");
-      focused = (await page.evaluate(`document.activeElement === document.querySelector(${sel})`)) as boolean;
+      focused = await page.evaluate((sel) => (globalThis as unknown as PageWindow).__wcagAudit.isActive(sel), selector);
     }
     if (!focused) {
-      focused = (await page.evaluate(`(() => { const el = document.querySelector(${sel}); el?.focus({ focusVisible: true }); return !!el && document.activeElement === el; })()`)) as boolean;
+      focused = await page.evaluate((sel) => (globalThis as unknown as PageWindow).__wcagAudit.focusVisible(sel), selector);
     }
     if (!focused) return "unknown";
     await page.waitForTimeout(SETTLE_MS);
-    // Area: the element (or, if it has no box, e.g. a visually hidden radio, its nearest boxed ancestor) plus a margin for rings.
-    const clip = (await page.evaluate(`(() => {
-      let el = document.querySelector(${sel});
-      let r = el.getBoundingClientRect();
-      while ((r.width < 4 || r.height < 4) && el.parentElement) { el = el.parentElement; r = el.getBoundingClientRect(); }
-      const pad = 16, vw = innerWidth, vh = innerHeight;
-      const x = Math.max(0, r.left - pad), y = Math.max(0, r.top - pad);
-      const w = Math.min(vw, r.right + pad) - x, h = Math.min(vh, r.bottom + pad) - y;
-      return w >= 2 && h >= 2 ? { x, y, width: w, height: h } : null;
-    })()`)) as { x: number; y: number; width: number; height: number } | null;
+    const clip = await page.evaluate((sel) => (globalThis as unknown as PageWindow).__wcagAudit.clipAround(sel), selector);
     if (!clip) return "unknown";
     const focusedShot = await page.screenshot({ clip, animations: "disabled", caret: "hide" });
-    await page.evaluate(`document.querySelector(${sel})?.blur()`);
+    await page.evaluate((sel) => (globalThis as unknown as PageWindow).__wcagAudit.blur(sel), selector);
     await page.waitForTimeout(SETTLE_MS);
     const blurredShot = await page.screenshot({ clip, animations: "disabled", caret: "hide" });
     if (!focusedShot.equals(blurredShot)) {
