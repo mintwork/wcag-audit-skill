@@ -65,6 +65,10 @@ hidden under a sticky header (2.4.11).
 
 ## 5. Map runtime findings back to source
 
-Each runtime finding has a CSS selector and the rendered HTML. Find the source by
-searching for distinctive class names, text, `data-testid`, or the component that renders
-that route. Record the source file and line on the finding — the fix happens in source.
+Each runtime finding has a CSS selector and the rendered HTML. Add `--source src` to the scan
+and the CLI searches the source for the element's test id, id, `aria-label` / `alt` /
+`placeholder`, project class names and short text, and adds `sourceHint: { file, line, via }`
+when one file clearly wins. It is a **hint**: open the file and confirm it renders that element
+(and which call site) before fixing. Without a hint, search yourself for distinctive class
+names, text or `data-testid`, or the component that renders that route. Record the source file
+and line on the finding — the fix happens in source.

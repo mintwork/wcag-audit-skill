@@ -71,7 +71,7 @@ Only if a URL is available or the app can be started. Find the dev command
 (`package.json` scripts, README), start it in the background, wait for it to respond, then:
 
 ```bash
-npx @mintwork/wcag-audit-skill scan http://localhost:3000 --json -o .wcag-audit/runtime.json --fail-on none
+npx @mintwork/wcag-audit-skill scan http://localhost:3000 --source src --json -o .wcag-audit/runtime.json --fail-on none
 # More pages / states:
 npx @mintwork/wcag-audit-skill scan http://localhost:3000/login http://localhost:3000/cart --json -o .wcag-audit/runtime-2.json --fail-on none
 ```

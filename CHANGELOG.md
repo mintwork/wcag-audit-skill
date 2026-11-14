@@ -8,6 +8,13 @@ within a minor line.
 
 ## [Unreleased]
 
+### Added
+
+- **Source hints for runtime findings** (`--source <dir>`): each runtime finding is searched for in the source by
+  its test id (`data-testid`, `data-cy`, …), id, `aria-label` / `alt` / `placeholder` / `name`, project class names
+  (not utility classes) and short text. When one file clearly wins, the finding gets
+  `sourceHint: { file, line, via }`, shown in text output and as a SARIF related location. Best effort: verify it.
+
 ## [0.1.2] - 2026-11-14
 
 ### Changed

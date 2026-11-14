@@ -22,6 +22,14 @@ export interface Location {
   selector?: string;
 }
 
+/** Best-effort source location of a runtime finding (`--source`). A hint: verify before editing. */
+export interface SourceHint {
+  file: string;
+  line: number;
+  /** The handles that matched, e.g. ['data-testid="pay"', 'text "Pay now"']. */
+  via: string[];
+}
+
 export interface Finding {
   /** Stable fingerprint: same issue at same place yields same id across runs. */
   id: string;
@@ -44,6 +52,8 @@ export interface Finding {
   helpUrl?: string;
   /** Set by the verification phase. */
   verified?: boolean;
+  /** Runtime findings with --source: where the element probably comes from in the source. */
+  sourceHint?: SourceHint;
 }
 
 export interface ScanResult {

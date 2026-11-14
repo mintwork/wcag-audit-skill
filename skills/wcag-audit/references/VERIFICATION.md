@@ -33,6 +33,9 @@ each one wrong**. Only findings that survive become `confirmed`.
 | `focus-visible` | focus is shown by a child (e.g. inner `<span>` ring) or a `::before/::after` pseudo-element — inspect styles |
 | `keyboard-trap` | it is an intentional modal with an Escape/close button that the scan did not exercise; still check it is `aria-modal` |
 
+A runtime finding's `sourceHint` (from `--source`) is a search result, not proof: confirm that
+the file renders the flagged element before you fix it there.
+
 ## Verdicts
 
 - **confirmed** — Fails the criterion and you can say exactly why. Severity is set by user

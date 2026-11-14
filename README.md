@@ -112,6 +112,7 @@ npx @mintwork/wcag-audit-skill rules                             # list rules + 
 | `--level A\|AA\|AAA` | runtime WCAG level (default `AA`) |
 | `--best-practice` | add axe best-practice rules |
 | `--wait-for <selector>` | SPA readiness |
+| `--source <dir>` | runtime: add a `sourceHint` (file:line, best effort) to each finding by searching `<dir>` for its test id, id, labels, class names and text |
 | `--no-keyboard` / `--no-verify` | skip Tab traversal / skip the verification re-run |
 | `--browser chrome\|msedge` | browser channel (auto-detects Playwright Chromium, Chrome, Edge) |
 
@@ -139,7 +140,7 @@ Exit codes: `0` clean, `1` findings at or above `--fail-on`, `2` usage or runtim
 }
 ```
 
-Runtime findings carry `location.url` + `location.selector` and `"verified": true`. IDs are stable fingerprints (rule + file + element), so they survive line moves and power `verify`.
+Runtime findings carry `location.url` + `location.selector` and `"verified": true`; with `--source src` they also get a `sourceHint` (`{ "file", "line", "via": ["data-testid=\"pay\""] }`, a SARIF related location), only when one file clearly matches. IDs are stable fingerprints (rule + file + element), so they survive line moves and power `verify`.
 
 ### False positives, kept low on purpose
 
@@ -255,7 +256,7 @@ Known gaps: `.mdx` files are not scanned; labels and names that come from compon
 - [ ] Angular template files (`.component.html` works today; inline `template:` strings next)
 - [ ] Multi-state runtime scans from a config file (open modal, submit empty form, dark mode, 320px)
 - [ ] Authenticated scans via Playwright storage state
-- [ ] Map runtime selectors back to source files automatically (React DevTools / source maps)
+- [x] Map runtime findings back to source, as a hint (`--source <dir>`: test ids, ids, labels, class names, text). Source maps / React DevTools: not yet
 - [ ] `--fix` for mechanical rules (`html-lang`, `meta-viewport-zoom`, `aria-attr-valid` typos)
 - [ ] Baseline file to fail CI only on new findings
 - [ ] Storybook integration: scan every story

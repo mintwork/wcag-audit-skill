@@ -52,6 +52,7 @@ export function formatText(results: ScanResult[]): string {
       const crit = f.wcag.length ? f.wcag.map((w) => `${w} ${WCAG[w]?.title ?? ""}`.trim()).join(", ") : "best practice";
       lines.push(`  ${sev} ${c("1", f.ruleId)}  ${c("2", `WCAG ${crit} (${f.level})`)}`);
       lines.push(`           ${c("4", where(f))}`);
+      if (f.sourceHint) lines.push(`           ${c("2", "source (hint):")} ${f.sourceHint.file}:${f.sourceHint.line} ${c("2", `via ${f.sourceHint.via.join(", ")}`)}`);
       lines.push(`           ${f.message}`);
       lines.push(`           ${c("2", "evidence:")} ${f.evidence}`);
       lines.push(`           ${c("32", "fix:")} ${f.fix}`);
@@ -150,6 +151,17 @@ export function formatSarif(results: ScanResult[]): string {
                   logicalLocations: [{ fullyQualifiedName: f.location.selector, kind: "element" }],
                 },
           ],
+          ...(f.sourceHint
+            ? {
+                relatedLocations: [
+                  {
+                    id: 1,
+                    physicalLocation: { artifactLocation: artifactFor(f.sourceHint.file), region: { startLine: Math.max(1, f.sourceHint.line) } },
+                    message: { text: `Possible source (hint, via ${f.sourceHint.via.join(", ")})` },
+                  },
+                ],
+              }
+            : {}),
           partialFingerprints: { "wcagAuditFinding/v1": f.id },
           properties: { wcag: f.wcag, severity: f.severity, confidence: f.confidence, verified: f.verified ?? f.confidence === "high" },
         })),

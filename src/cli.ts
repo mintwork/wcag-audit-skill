@@ -37,6 +37,8 @@ Runtime
   --no-keyboard          skip Tab traversal (keyboard trap / focus visible)
   --no-verify            skip the verification re-run
   --wait-for <selector>  wait for an element before scanning (SPAs)
+  --source <dir>         map runtime findings to likely source files (best effort; reported as a
+                         hint) by searching <dir> for test ids, ids, labels, class names and text
   --browser <channel>    chromium | chrome | msedge (default: auto-detect)
   --headed               show the browser window
   --timeout <ms>         navigation timeout (default: 30000)
@@ -63,6 +65,7 @@ async function main(argv: string[]): Promise<number> {
       "no-verify": { type: "boolean" },
       runtime: { type: "boolean" },
       "wait-for": { type: "string" },
+      source: { type: "string" },
       browser: { type: "string" },
       headed: { type: "boolean" },
       timeout: { type: "string" },
@@ -137,6 +140,14 @@ async function main(argv: string[]): Promise<number> {
 
   const results: ScanResult[] = [];
   for (const t of targets) results.push(await scan(t, opts));
+  if (values.source) {
+    const { addSourceHints } = await import("./runtime/source-hints.js");
+    const runtime = results.filter((r) => r.kind === "runtime").reduce((n, r) => n + r.findings.length, 0);
+    if (runtime) {
+      const n = await addSourceHints(results, values.source, { ignore: opts.ignore });
+      console.error(`${TOOL.name}: source hints for ${n} of ${runtime} runtime finding${runtime === 1 ? "" : "s"} (verify before editing)`);
+    }
+  }
 
   const out = values.sarif ? formatSarif(results) : values.json ? formatJson(results) : formatText(results);
   await emit(out, values.output);
