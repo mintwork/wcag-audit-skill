@@ -252,7 +252,7 @@ Known gaps: `.mdx` files are not scanned; labels and names that come from compon
 - [ ] MDX files, and resolving labels across files (imported `<Field>`, MUI `<TextField label>`)
 - [ ] Rules: `autocomplete-valid` (1.3.5), `label-in-name` (2.5.3), table headers, duplicate ids, Tailwind contrast from class names
 - [ ] CSS analysis: `outline: none` without `:focus-visible` replacement (2.4.7) in source
-- [ ] Angular template files (`.component.html` works today; inline `template:` strings next)
+- [x] Angular templates: `.component.html` files and inline `template:` strings in `@Component` (`.ts`)
 - [ ] Multi-state runtime scans from a config file (open modal, submit empty form, dark mode, 320px)
 - [ ] Authenticated scans via Playwright storage state
 - [ ] Map runtime selectors back to source files automatically (React DevTools / source maps)

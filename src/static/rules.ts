@@ -85,6 +85,19 @@ function isIconOnlyButtonComponent(el: ElementNode): boolean {
   return true;
 }
 
+/** Directives that only change looks (ripple, tooltip, styling), not role or keyboard behavior. */
+const COSMETIC_DIRECTIVE = /^(pRipple|matRipple|pTooltip|matTooltip|cdkScrollable|ngNonBindable|pStyleClass|pBind|ngSkipHydration)$/;
+
+/**
+ * Angular attribute directives on an element (`<div ngCombobox>`, `<li cdkMenuItem>`, `<button pButton>`):
+ * valueless camelCase attributes in a template. They can add a role, tabindex and key handlers.
+ */
+function hasBehaviorDirective(ctx: RuleContext, el: ElementNode): boolean {
+  if (ctx.doc.framework !== "html") return false;
+  for (const a of el.attrs.values()) if (/^[a-z][a-z0-9]*[A-Z][A-Za-z0-9]*$/.test(a.rawName) && (a.value === "" || a.value === "true") && !COSMETIC_DIRECTIVE.test(a.rawName)) return true;
+  return false;
+}
+
 /** Server-side template placeholders that inject <title> and other head tags at render time. */
 const HEAD_PLACEHOLDER = /%[\w.-]*head[\w.-]*%|<!--\s*[\w-]*head[\w-]*\s*-->|<%|\{\{|\{%|<\?/i;
 
@@ -332,6 +345,8 @@ export const rules: Rule[] = [
         if (isInputButton) {
           if (has(el, "value") || nameFromAttrs(el) !== "no") return;
         } else if (accessibleName(el) !== "no") return;
+        // label="…" is not a <button> attribute: an attribute directive renders it (Angular <button pButton label>, mat-*).
+        if (has(el, "label")) return;
         if (labelledByLabel(ctx, el) !== "no") return;
         ctx.report({
           el,
@@ -401,7 +416,10 @@ export const rules: Rule[] = [
         if (el.isComponent || !NON_INTERACTIVE_CONTAINERS.has(el.tag)) return;
         if (!hasClickHandler(el)) return;
         if (has(el, "role") || isAriaHidden(el)) return;
-        if (el.hasSpread || receivesInjectedInteraction(el)) return;
+        if (el.hasSpread || receivesInjectedInteraction(el) || hasBehaviorDirective(ctx, el)) return;
+        // Clicks on content inside an option / menu item / tab: the widget itself is the keyboard-operable
+        // control. Not for drag gestures (pointerdown on a resize handle is a separate function).
+        if (has(el, "onclick") && !["onmousedown", "onmouseup", "onpointerdown", "onpointerup"].some((h) => has(el, h)) && ancestor(el, (p) => !p.isComponent && INTERACTIVE_ROLES.has(roleOf(p) ?? ""))) return;
         // e.g. <div class="dialog" @click.stop>: the handler only keeps clicks from reaching a backdrop.
         if (onlyStopsPropagation(el)) return;
         // <li onClick={run}><button>Run</button></li>: keyboard activation of the inner control bubbles here.
@@ -430,7 +448,7 @@ export const rules: Rule[] = [
         const role = roleOf(el);
         if (!role || !INTERACTIVE_ROLES.has(role)) return;
         if (el.hasSpread || isAriaHidden(el) || sv(el, "aria-disabled") === "true") return;
-        if (receivesInjectedInteraction(el)) return;
+        if (receivesInjectedInteraction(el) || hasBehaviorDirective(ctx, el)) return;
         const tab = attr(el, "tabindex");
         const notFocusable = !tab;
         const noKeys = hasClickHandler(el) && !hasKeyHandler(el);

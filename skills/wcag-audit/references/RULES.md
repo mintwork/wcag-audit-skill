@@ -50,6 +50,13 @@ reason*:
 
 `wcag-audit-ignore-file` anywhere in a file skips it entirely.
 
+**Angular:** `.component.html` templates and inline `template:` strings in `@Component({...})`
+(`.ts` files; other TypeScript is skipped and not counted) are parsed as HTML with Angular
+syntax: `(click)`, `[attr.aria-label]`, `*ngIf`, `@if {}`. Valueless camelCase attribute
+directives (`<div ngCombobox>`, `<li cdkMenuItem>`) may add a role and keyboard handling, so
+`no-div-button` and `interactive-role-keyboard` skip elements that carry one; `<button pButton
+label="…">` counts as named.
+
 ## Runtime rules (browser)
 
 Run by `wcag-audit-skill scan <url>`.

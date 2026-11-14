@@ -8,6 +8,18 @@ within a minor line.
 
 ## [Unreleased]
 
+### Added
+
+- **Angular inline templates**: `template:` strings in `@Component({...})` are scanned in `.ts` files, with line
+  and column numbers in the `.ts` source. Other TypeScript files are skipped and not counted.
+
+### Changed
+
+- Fewer false positives in component-library templates: `no-div-button` and `interactive-role-keyboard` skip
+  elements with Angular attribute directives (`<div ngCombobox>`), `no-div-button` skips click handlers on content
+  inside an element with an interactive role (`<li role="option"><div (click)>`), and `button-name` treats a
+  `label="…"` attribute on `<button>` (`<button pButton label>`) as a name.
+
 ## [0.1.2] - 2026-11-14
 
 ### Changed

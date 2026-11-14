@@ -64,8 +64,10 @@ rg -n "onClick=" src | rg -v "<(button|a|input|select|summary|[A-Z])"
   empty. `v-html` content is invisible to static analysis; scan it at runtime.
 - **Svelte**: Svelte's compiler already emits `a11y-*` warnings — run `npx svelte-check`
   and treat its a11y warnings as candidates too.
-- **Angular**: `[attr.aria-label]` for ARIA bindings; `(click)` on non-buttons is the most
-  common failure. `@angular/cdk/a11y` provides `FocusTrap` and `LiveAnnouncer`.
+- **Angular**: `.component.html` and inline `template:` strings are scanned. `[attr.aria-label]`
+  for ARIA bindings; `(click)` on non-buttons is the most common failure. Elements with
+  attribute directives (`ngCombobox`, `cdkMenuItem`) are skipped by the fake-button rules:
+  check what the directive adds. `@angular/cdk/a11y` provides `FocusTrap` and `LiveAnnouncer`.
 - **Astro**: frontmatter is skipped; framework islands (`.tsx`, `.vue`, `.svelte`) are
   scanned by their own parsers.
 - **Tailwind**: `sr-only` for hidden labels; `focus-visible:ring-2` as the focus style;

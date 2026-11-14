@@ -65,7 +65,7 @@ describe("static scan: known-bad fixtures", () => {
 });
 
 describe("static scan: clean fixtures produce zero findings", () => {
-  for (const file of ["page.html", "ProductCard.tsx", "Signup.vue", "Nav.svelte"]) {
+  for (const file of ["page.html", "ProductCard.tsx", "Signup.vue", "Nav.svelte", "hero.component.ts"]) {
     it(file, async () => {
       const r = await scanStatic(path.join(FIX, "good", file));
       expect(r.findings).toEqual([]);
