@@ -37,6 +37,9 @@ Runtime
   --no-keyboard          skip Tab traversal (keyboard trap / focus visible)
   --no-verify            skip the verification re-run
   --wait-for <selector>  wait for an element before scanning (SPAs)
+  --storybook <url|dir>  scan every story of a Storybook (running URL or static build directory)
+  --stories <patterns>   with --storybook: only stories whose id or title contains one of these
+                         comma-separated substrings
   --browser <channel>    chromium | chrome | msedge (default: auto-detect)
   --headed               show the browser window
   --timeout <ms>         navigation timeout (default: 30000)
@@ -63,6 +66,8 @@ async function main(argv: string[]): Promise<number> {
       "no-verify": { type: "boolean" },
       runtime: { type: "boolean" },
       "wait-for": { type: "string" },
+      storybook: { type: "string" },
+      stories: { type: "string" },
       browser: { type: "string" },
       headed: { type: "boolean" },
       timeout: { type: "string" },
@@ -133,10 +138,15 @@ async function main(argv: string[]): Promise<number> {
   }
 
   if (command !== "scan") return usage(`Unknown command "${command}"`);
-  if (!targets.length) return usage("scan needs at least one <path|url>");
+  if (!targets.length && !values.storybook) return usage("scan needs at least one <path|url> (or --storybook)");
 
   const results: ScanResult[] = [];
   for (const t of targets) results.push(await scan(t, opts));
+  if (values.storybook) {
+    const { scanStorybook } = await import("./runtime/storybook.js");
+    const progress = process.stderr.isTTY ? (i: number, n: number) => process.stderr.write(`\r${TOOL.name}: story ${i}/${n}${i === n ? "\n" : ""}`) : undefined;
+    results.push(...(await scanStorybook(values.storybook, { ...opts, stories: values.stories, onStory: progress })));
+  }
 
   const out = values.sarif ? formatSarif(results) : values.json ? formatJson(results) : formatText(results);
   await emit(out, values.output);

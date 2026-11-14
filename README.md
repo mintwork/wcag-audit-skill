@@ -112,10 +112,13 @@ npx @mintwork/wcag-audit-skill rules                             # list rules + 
 | `--level A\|AA\|AAA` | runtime WCAG level (default `AA`) |
 | `--best-practice` | add axe best-practice rules |
 | `--wait-for <selector>` | SPA readiness |
+| `--storybook <url\|dir>` / `--stories a,b` | scan every story of a running Storybook or a static build (`storybook-static/`); `--stories` filters by id / title |
 | `--no-keyboard` / `--no-verify` | skip Tab traversal / skip the verification re-run |
 | `--browser chrome\|msedge` | browser channel (auto-detects Playwright Chromium, Chrome, Edge) |
 
 Exit codes: `0` clean, `1` findings at or above `--fail-on`, `2` usage or runtime error.
+
+**Storybook:** `scan --storybook http://localhost:6006` (or `--storybook storybook-static`) reads the story index (`index.json`, or `stories.json` for 6.x), opens every story's `iframe.html?id=…` in one browser and runs the runtime scan on each, skipping docs pages and Storybook's own UI. Finding ids come from the story id, so they stay stable across runs and ports, and `verify` re-scans the story.
 
 **Runtime browser:** uses Playwright's Chromium if installed (`npx playwright install chromium`), otherwise your local Chrome or Edge. Set `WCAG_AUDIT_CHROME_PATH` for a custom binary.
 
@@ -258,7 +261,7 @@ Known gaps: `.mdx` files are not scanned; labels and names that come from compon
 - [ ] Map runtime selectors back to source files automatically (React DevTools / source maps)
 - [ ] `--fix` for mechanical rules (`html-lang`, `meta-viewport-zoom`, `aria-attr-valid` typos)
 - [ ] Baseline file to fail CI only on new findings
-- [ ] Storybook integration: scan every story
+- [x] Storybook integration: scan every story (`--storybook <url|dir>`)
 
 Have an idea or a false positive? [Open an issue](CONTRIBUTING.md) with a minimal snippet.
 

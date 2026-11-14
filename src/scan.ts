@@ -56,7 +56,9 @@ export async function verifyReport(report: { scans: ScanResult[] }, opts: ScanOp
   const out: VerifyResult = { resolved: [], remaining: [], introduced: [] };
   for (const prev of report.scans) {
     const runtime = prev.kind === "runtime";
-    const fresh = await scan(prev.target, { ...opts, runtime: runtime && !isUrl(prev.target) ? true : opts.runtime });
+    const fresh = prev.story
+      ? (await (await import("./runtime/storybook.js")).scanStorybook(prev.story.source, { ...opts, storyIds: [prev.story.id] }))[0]!
+      : await scan(prev.target, { ...opts, runtime: runtime && !isUrl(prev.target) ? true : opts.runtime });
     const now = new Map(fresh.findings.map((f) => [f.id, f]));
     const before = new Set(prev.findings.map((f) => f.id));
     for (const f of prev.findings) (now.has(f.id) ? out.remaining : out.resolved).push(f);

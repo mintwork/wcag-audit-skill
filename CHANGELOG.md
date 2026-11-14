@@ -8,6 +8,13 @@ within a minor line.
 
 ## [Unreleased]
 
+### Added
+
+- **Storybook integration**: `scan --storybook <url|dir>` scans every story of a running Storybook or a static
+  build. It reads `index.json` (7+) or `stories.json` (6.x), skips docs entries, opens each story's iframe in one
+  browser and excludes Storybook's own UI from axe. `--stories a,b` limits it to stories whose id or title
+  contains a pattern. Finding ids come from the story id (stable across ports); `verify` re-scans the story.
+
 ## [0.1.2] - 2026-11-14
 
 ### Changed

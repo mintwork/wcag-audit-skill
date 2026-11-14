@@ -5,3 +5,4 @@ export { rules } from "./static/rules.js";
 export { formatText, formatJson, formatSarif } from "./report/index.js";
 export { WCAG } from "./wcag.js";
 export * from "./types.js";
+export { scanStorybook, storiesFromIndex, filterStories, type Story, type StorybookOptions } from "./runtime/storybook.js";

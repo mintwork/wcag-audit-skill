@@ -56,4 +56,6 @@ export interface ScanResult {
   findings: Finding[];
   /** Findings dropped during verification (not reproducible). */
   discarded: number;
+  /** Storybook scans: the story, and the Storybook (URL or static build directory) it came from. */
+  story?: { id: string; title: string; name: string; source: string };
 }

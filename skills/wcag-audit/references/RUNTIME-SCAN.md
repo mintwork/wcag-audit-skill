@@ -33,6 +33,16 @@ npx @mintwork/wcag-audit-skill scan http://localhost:3000 http://localhost:3000/
 
 If no browser launches: `npx playwright install chromium` (or install Chrome).
 
+If the project has Storybook, scan every story too: it covers component states that no route
+shows (`npm run build-storybook` first, or a running `npm run storybook`):
+
+```bash
+npx @mintwork/wcag-audit-skill scan --storybook storybook-static --json -o .wcag-audit/storybook.json --fail-on none
+npx @mintwork/wcag-audit-skill scan --storybook http://localhost:6006 --stories button,forms/   # a subset
+```
+
+Map story findings to source through the story's `importPath` in `index.json`.
+
 ## 3. Cover states, not just pages
 
 A page's initial load is a fraction of its UI. For each primary flow, also check:
