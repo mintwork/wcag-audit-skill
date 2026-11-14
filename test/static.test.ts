@@ -153,6 +153,10 @@ describe("false-positive guards", () => {
     expect(run("a.html", `<!-- wcag-audit-ignore img-alt -->\n<img src="x.png">`)).toEqual([]);
     expect(run("a.html", `<!-- wcag-audit-ignore link-name -->\n<img src="x.png">`)).toEqual(["img-alt"]);
     expect(run("a.html", `<!-- wcag-audit-ignore-file -->\n<img src="x.png">`)).toEqual([]);
+    // The documented form, with a reason after a colon.
+    expect(run("a.html", `<!-- wcag-audit-ignore img-alt: tracking pixel, hidden from AT -->\n<img src="x.png">`)).toEqual([]);
+    expect(run("a.tsx", `const A = () => <>\n{/* wcag-audit-ignore img-alt, link-name: decorative */}\n<img src="x.png" /></>;`)).toEqual([]);
+    expect(run("a.html", `<!-- wcag-audit-ignore link-name: not this one -->\n<img src="x.png">`)).toEqual(["img-alt"]);
   });
 
   it("allows decorative images and dialog autofocus", () => {

@@ -8,6 +8,11 @@ within a minor line.
 
 ## [Unreleased]
 
+### Fixed
+
+- Suppression comments with a reason (`wcag-audit-ignore img-alt: tracking pixel`), the documented form, now
+  suppress the finding. The colon and the words of the reason were read as rule ids, so nothing was suppressed.
+
 ## [0.1.2] - 2026-11-14
 
 ### Changed
