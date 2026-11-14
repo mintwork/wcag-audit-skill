@@ -1,5 +1,7 @@
 #!/usr/bin/env node
+import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
+import { type ScanJob, jobsFromConfig, loadRuntimeConfig } from "./runtime/states.js";
 import { parseArgs } from "node:util";
 import { counts, formatJson, formatSarif, formatText, where } from "./report/index.js";
 import { type ScanOptions, scan, verifyReport } from "./scan.js";
@@ -37,6 +39,11 @@ Runtime
   --no-keyboard          skip Tab traversal (keyboard trap / focus visible)
   --no-verify            skip the verification re-run
   --wait-for <selector>  wait for an element before scanning (SPAs)
+  --config <file>        scan the pages and states in a JSON config (open a modal, submit an empty
+                         form, dark mode, 320px); see README "Runtime states"
+  --storage-state <file> Playwright storage state (cookies, localStorage) for authenticated pages
+  --color-scheme <s>     light | dark (prefers-color-scheme)
+  --viewport <WxH>       viewport size, e.g. 320x640 (default 1280x800)
   --browser <channel>    chromium | chrome | msedge (default: auto-detect)
   --headed               show the browser window
   --timeout <ms>         navigation timeout (default: 30000)
@@ -63,6 +70,10 @@ async function main(argv: string[]): Promise<number> {
       "no-verify": { type: "boolean" },
       runtime: { type: "boolean" },
       "wait-for": { type: "string" },
+      config: { type: "string" },
+      "storage-state": { type: "string" },
+      "color-scheme": { type: "string" },
+      viewport: { type: "string" },
       browser: { type: "string" },
       headed: { type: "boolean" },
       timeout: { type: "string" },
@@ -88,6 +99,15 @@ async function main(argv: string[]): Promise<number> {
   const failOn = (values["fail-on"] ?? "minor") as Severity | "none";
   if (failOn !== "none" && !(failOn in SEVERITY_ORDER)) return usage("--fail-on must be critical, serious, moderate, minor or none");
 
+  const colorScheme = values["color-scheme"] as "light" | "dark" | undefined;
+  if (colorScheme && colorScheme !== "light" && colorScheme !== "dark") return usage("--color-scheme must be light or dark");
+  let viewport: { width: number; height: number } | undefined;
+  if (values.viewport) {
+    const m = /^(\d+)x(\d+)$/.exec(values.viewport);
+    if (!m) return usage("--viewport must look like 320x640");
+    viewport = { width: Number(m[1]), height: Number(m[2]) };
+  }
+
   const opts: ScanOptions = {
     level,
     minConfidence,
@@ -101,6 +121,8 @@ async function main(argv: string[]): Promise<number> {
     channel: values.browser,
     headed: values.headed,
     timeoutMs: values.timeout ? Number(values.timeout) : undefined,
+    colorScheme,
+    viewport,
   };
 
   if (command === "rules") {
@@ -133,10 +155,15 @@ async function main(argv: string[]): Promise<number> {
   }
 
   if (command !== "scan") return usage(`Unknown command "${command}"`);
-  if (!targets.length) return usage("scan needs at least one <path|url>");
+  const config = values.config ? await loadRuntimeConfig(values.config) : undefined;
+  if (!targets.length && !config) return usage("scan needs at least one <path|url> (or --config)");
+  const storageState = values["storage-state"] ?? config?.storageState;
+  if (storageState && !existsSync(storageState)) return usage(`storage state file not found: ${storageState}`);
+  opts.storageState = storageState;
 
   const results: ScanResult[] = [];
   for (const t of targets) results.push(await scan(t, opts));
+  if (config) results.push(...(await scanJobs(jobsFromConfig(config), opts)));
 
   const out = values.sarif ? formatSarif(results) : values.json ? formatJson(results) : formatText(results);
   await emit(out, values.output);
@@ -148,6 +175,26 @@ async function main(argv: string[]): Promise<number> {
   if (failOn === "none") return 0;
   const threshold = SEVERITY_ORDER[failOn];
   return results.some((r) => r.findings.some((f) => SEVERITY_ORDER[f.severity] >= threshold)) ? 1 : 0;
+}
+
+/** Config pages × states, in one browser. */
+async function scanJobs(jobs: ScanJob[], opts: ScanOptions): Promise<ScanResult[]> {
+  const { launchBrowser } = await import("./runtime/browser.js");
+  const browser = await launchBrowser(opts);
+  const out: ScanResult[] = [];
+  try {
+    for (const job of jobs) {
+      const label = job.state ? `${job.url} (state: ${job.state.name})` : job.url;
+      try {
+        out.push(await scan(job.url, { ...opts, waitFor: job.waitFor ?? opts.waitFor, state: job.state, browser }));
+      } catch (e) {
+        throw new Error(`${label}: ${(e as Error).message}`);
+      }
+    }
+  } finally {
+    await browser.close();
+  }
+  return out;
 }
 
 async function emit(text: string, file?: string) {

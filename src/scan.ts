@@ -56,7 +56,7 @@ export async function verifyReport(report: { scans: ScanResult[] }, opts: ScanOp
   const out: VerifyResult = { resolved: [], remaining: [], introduced: [] };
   for (const prev of report.scans) {
     const runtime = prev.kind === "runtime";
-    const fresh = await scan(prev.target, { ...opts, runtime: runtime && !isUrl(prev.target) ? true : opts.runtime });
+    const fresh = await scan(prev.target, { ...opts, runtime: runtime && !isUrl(prev.target) ? true : opts.runtime, state: prev.state });
     const now = new Map(fresh.findings.map((f) => [f.id, f]));
     const before = new Set(prev.findings.map((f) => f.id));
     for (const f of prev.findings) (now.has(f.id) ? out.remaining : out.resolved).push(f);

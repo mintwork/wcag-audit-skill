@@ -60,6 +60,8 @@ window.__wcagAudit = {
 
 export interface KeyboardOptions {
   maxTabs?: number;
+  /** Don't click the page to reset focus (it could close an open modal or menu). */
+  noMouse?: boolean;
 }
 
 /**
@@ -74,7 +76,7 @@ export async function keyboardAudit(page: Page, url: string, opts: KeyboardOptio
   const maxTabs = opts.maxTabs ?? Math.min(250, total * 2 + 6);
 
   await page.evaluate("document.activeElement && document.activeElement.blur && document.activeElement.blur()");
-  await page.mouse.click(1, 1).catch(() => {});
+  if (!opts.noMouse) await page.mouse.click(1, 1).catch(() => {});
   await page.evaluate("document.activeElement && document.activeElement.blur && document.activeElement.blur()");
 
   const seq: Array<Stop | null> = [];

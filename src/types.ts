@@ -20,6 +20,8 @@ export interface Location {
   url?: string;
   /** CSS selector for runtime findings. */
   selector?: string;
+  /** Runtime state the finding was seen in (e.g. "menu open", "dark"). */
+  state?: string;
 }
 
 export interface Finding {
@@ -56,4 +58,6 @@ export interface ScanResult {
   findings: Finding[];
   /** Findings dropped during verification (not reproducible). */
   discarded: number;
+  /** Runtime only: the state the page was brought into before scanning (replayed by verify). */
+  state?: import("./runtime/states.js").RuntimeState;
 }

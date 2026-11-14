@@ -28,7 +28,7 @@ function locKey(f: Finding): string {
 export function where(f: Finding): string {
   const l = f.location;
   if (l.file) return `${l.file}:${l.line ?? 1}:${l.column ?? 1}`;
-  return `${l.url ?? ""} ${l.selector ? `[${l.selector}]` : ""}`.trim();
+  return `${l.url ?? ""} ${l.selector ? `[${l.selector}]` : ""}${l.state ? ` (state: ${l.state})` : ""}`.trim();
 }
 
 export function counts(findings: Finding[]): Record<Severity, number> {
@@ -40,7 +40,7 @@ export function counts(findings: Finding[]): Record<Severity, number> {
 export function formatText(results: ScanResult[]): string {
   const lines: string[] = [];
   for (const r of results) {
-    const head = r.kind === "static" ? `Static scan of ${r.target} (${r.filesScanned ?? 0} file${r.filesScanned === 1 ? "" : "s"})` : `Runtime scan of ${r.target}`;
+    const head = r.kind === "static" ? `Static scan of ${r.target} (${r.filesScanned ?? 0} file${r.filesScanned === 1 ? "" : "s"})` : `Runtime scan of ${r.target}${r.state ? ` (state: ${r.state.name})` : ""}`;
     lines.push(c("1", head));
     if (!r.findings.length) {
       lines.push(c("32", "  ✓ No accessibility issues found by automated checks."));
@@ -147,7 +147,7 @@ export function formatSarif(results: ScanResult[]): string {
                 }
               : {
                   physicalLocation: { artifactLocation: { uri: f.location.url } },
-                  logicalLocations: [{ fullyQualifiedName: f.location.selector, kind: "element" }],
+                  logicalLocations: [{ fullyQualifiedName: f.location.state ? `${f.location.selector} (state: ${f.location.state})` : f.location.selector, kind: "element" }],
                 },
           ],
           partialFingerprints: { "wcagAuditFinding/v1": f.id },

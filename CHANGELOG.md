@@ -8,6 +8,15 @@ within a minor line.
 
 ## [Unreleased]
 
+### Added
+
+- **Multi-state runtime scans** (`scan --config <file>`): a JSON config lists pages and states; each page is
+  scanned in its default state and in every state, all in one browser. States set `colorScheme`, `viewport`,
+  `reducedMotion` and run steps (`click`, `fill`, `press`, `hover`, `check`, `select`, `waitFor`, `wait`) to open a
+  modal or submit an empty form first. Findings carry `location.state`, their ids include the state, and `verify`
+  replays it. `--color-scheme` and `--viewport WxH` set a single state without a config.
+- **Authenticated scans** with a Playwright storage state: `--storage-state <file>` or `"storageState"` in the config.
+
 ## [0.1.2] - 2026-11-14
 
 ### Changed

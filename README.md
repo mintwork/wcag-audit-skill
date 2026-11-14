@@ -112,10 +112,35 @@ npx @mintwork/wcag-audit-skill rules                             # list rules + 
 | `--level A\|AA\|AAA` | runtime WCAG level (default `AA`) |
 | `--best-practice` | add axe best-practice rules |
 | `--wait-for <selector>` | SPA readiness |
+| `--config <file>` | scan pages × states from a JSON config (see [Runtime states](#runtime-states)) |
+| `--storage-state <file>` | Playwright storage state (cookies, localStorage) for authenticated pages |
+| `--color-scheme dark\|light` / `--viewport 320x640` | one-off state without a config |
 | `--no-keyboard` / `--no-verify` | skip Tab traversal / skip the verification re-run |
 | `--browser chrome\|msedge` | browser channel (auto-detects Playwright Chromium, Chrome, Edge) |
 
 Exit codes: `0` clean, `1` findings at or above `--fail-on`, `2` usage or runtime error.
+
+### Runtime states
+
+A page's first paint is a fraction of its UI. List pages and states in a JSON config and every page is scanned in its default state plus each state: open a modal by clicking a selector, submit an empty form, dark mode, 320px ([full example](examples/wcag-audit.config.json)):
+
+```json
+{
+  "baseUrl": "http://localhost:3000",
+  "storageState": ".auth/user.json",
+  "states": [{ "name": "dark", "colorScheme": "dark" }, { "name": "320px", "viewport": { "width": 320, "height": 640 } }],
+  "pages": ["/", { "url": "/settings", "states": [
+    { "name": "dialog open", "steps": [{ "click": "#open-settings" }, { "waitFor": "[role=dialog]" }] },
+    { "name": "empty submit", "steps": [{ "click": "form button[type=submit]" }] }
+  ] }]
+}
+```
+
+```bash
+npx @mintwork/wcag-audit-skill scan --config wcag-audit.config.json
+```
+
+Steps: `click`, `fill` (+ `value`), `press` (+ optional `selector`), `hover`, `check`, `select` (+ `value`), `waitFor`, `wait` (ms). States also take `colorScheme`, `viewport` and `reducedMotion`. All states run in one browser; findings carry `location.state`, ids include the state, and `verify` replays it. **Authenticated pages:** record a [storage state](https://playwright.dev/docs/auth) once (`npx playwright codegen --save-storage=.auth/user.json <login-url>`) and pass `--storage-state .auth/user.json` (or `"storageState"` in the config, relative to it). Keep it out of git.
 
 **Runtime browser:** uses Playwright's Chromium if installed (`npx playwright install chromium`), otherwise your local Chrome or Edge. Set `WCAG_AUDIT_CHROME_PATH` for a custom binary.
 
@@ -253,8 +278,8 @@ Known gaps: `.mdx` files are not scanned; labels and names that come from compon
 - [ ] Rules: `autocomplete-valid` (1.3.5), `label-in-name` (2.5.3), table headers, duplicate ids, Tailwind contrast from class names
 - [ ] CSS analysis: `outline: none` without `:focus-visible` replacement (2.4.7) in source
 - [ ] Angular template files (`.component.html` works today; inline `template:` strings next)
-- [ ] Multi-state runtime scans from a config file (open modal, submit empty form, dark mode, 320px)
-- [ ] Authenticated scans via Playwright storage state
+- [x] Multi-state runtime scans from a config file (open modal, submit empty form, dark mode, 320px): `--config`
+- [x] Authenticated scans via Playwright storage state: `--storage-state`
 - [ ] Map runtime selectors back to source files automatically (React DevTools / source maps)
 - [ ] `--fix` for mechanical rules (`html-lang`, `meta-viewport-zoom`, `aria-attr-valid` typos)
 - [ ] Baseline file to fail CI only on new findings

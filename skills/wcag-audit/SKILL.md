@@ -78,7 +78,9 @@ npx @mintwork/wcag-audit-skill scan http://localhost:3000/login http://localhost
 
 Scan the pages that matter (home, primary flows, forms, modals open) — see
 [references/RUNTIME-SCAN.md](references/RUNTIME-SCAN.md) for states to cover, SPA waits
-and auth. Runtime findings catch what static analysis cannot: computed contrast, real
+and auth. Put states (open a modal, submit an empty form, dark mode, 320px) in a config and
+run `scan --config .wcag-audit/config.json`; for logged-in pages use `--storage-state <file>`
+from the user, never credentials. Runtime findings catch what static analysis cannot: computed contrast, real
 accessible names, focus order, keyboard traps, invisible focus.
 
 ### Phase 3 — Verification (remove false positives)
