@@ -2,6 +2,7 @@ import type { Confidence, Severity } from "../types.js";
 import { ARIA_ATTRIBUTES, ARIA_ROLES, INTERACTIVE_ROLES, NATIVE_INTERACTIVE, NON_INTERACTIVE_CONTAINERS, closest } from "./aria.js";
 import type { ElementNode, ParsedDocument } from "./ast.js";
 import type { Tri } from "./helpers.js";
+import { moreRules } from "./more-rules.js";
 import {
   accessibleName,
   ancestor,
@@ -787,6 +788,7 @@ export const rules: Rule[] = [
       },
     }),
   },
+  ...moreRules,
 ];
 
 export const ruleById = new Map(rules.map((r) => [r.meta.id, r]));

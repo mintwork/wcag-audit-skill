@@ -86,7 +86,7 @@ The skill ([`skills/wcag-audit/SKILL.md`](skills/wcag-audit/SKILL.md)) gives the
 
 | Phase | What happens | Output |
 | --- | --- | --- |
-| **1. Static scan** | CLI parses HTML, JSX/TSX, Vue, Svelte, Astro and checks 24 rules. The agent then reviews what tools miss: shared components, `outline: none`, color-only state. | `.wcag-audit/static.json` |
+| **1. Static scan** | CLI parses HTML, JSX/TSX, Vue, Svelte, Astro and checks 29 rules. The agent then reviews what tools miss: shared components, `outline: none`, color-only state. | `.wcag-audit/static.json` |
 | **2. Runtime scan** | Starts your dev server, opens pages in real Chromium, runs **axe-core**, and **tabs through the page** to catch keyboard traps and invisible focus. | `.wcag-audit/runtime.json` |
 | **3. Verification** | Each candidate is re-checked to *disprove* it: trace props and spreads, check the rendered DOM. Verdict: `confirmed`, `needs_validation`, or `rejected`. Runtime violations are re-run automatically and dropped if they don't reproduce. | verdicts |
 | **4. Fix** | Minimal, native-HTML-first fixes in your framework's idiom, each explained (what was wrong, who it affected, what changed). Visual/copy changes need your OK. Never invents alt text. | diffs + `verify` |
@@ -211,6 +211,11 @@ Inputs: `targets`, `fail-on`, `sarif-file`, `upload-sarif`, `args`, `version` (e
 | `video-captions` | 1.2.2 | serious | `<video>` without captions track |
 | `no-distracting-elements` | 2.2.2 | serious | `<marquee>`, `<blink>` |
 | `no-autofocus` | 2.4.3, 3.2.1 | minor | `autofocus` outside dialogs |
+| `autocomplete-valid` | 1.3.5 | serious | `autocomplete="emial"`, `"firstname"`, `"work name"` (suggests the token) |
+| `label-in-name` | 2.5.3 | serious | `aria-label="Open navigation"` on a button that reads "Menu" |
+| `table-headers` | 1.3.1 | serious | data tables without `<th>` / `scope`, header rows made of `<td>` |
+| `duplicate-id-ref` | 1.3.1, 4.1.2 | serious | duplicate `id` that a `<label for>` or `aria-*` reference points to |
+| `tailwind-contrast` | 1.4.3 | serious | `text-gray-400` on `bg-white` and other default-palette pairs below 4.5:1 (3:1 large); medium confidence |
 
 ### Runtime (browser)
 
@@ -250,7 +255,7 @@ Known gaps: `.mdx` files are not scanned; labels and names that come from compon
 ## Roadmap
 
 - [ ] MDX files, and resolving labels across files (imported `<Field>`, MUI `<TextField label>`)
-- [ ] Rules: `autocomplete-valid` (1.3.5), `label-in-name` (2.5.3), table headers, duplicate ids, Tailwind contrast from class names
+- [x] Rules: `autocomplete-valid` (1.3.5), `label-in-name` (2.5.3), `table-headers`, `duplicate-id-ref`, `tailwind-contrast` (Tailwind contrast from class names)
 - [ ] CSS analysis: `outline: none` without `:focus-visible` replacement (2.4.7) in source
 - [ ] Angular template files (`.component.html` works today; inline `template:` strings next)
 - [ ] Multi-state runtime scans from a config file (open modal, submit empty form, dark mode, 320px)

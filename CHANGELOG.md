@@ -8,6 +8,17 @@ within a minor line.
 
 ## [Unreleased]
 
+### Added
+
+- **New static rules** (29 in total), each mapped to WCAG 2.2 and documented in `references/RULES.md`:
+  - `autocomplete-valid` (1.3.5): invalid `autocomplete` values, with the intended token for typos and
+    common aliases (`emial` → `email`, `firstname` → `given-name`, `work name` → `name`).
+  - `label-in-name` (2.5.3): `aria-label` that does not contain the control's visible text.
+  - `table-headers` (1.3.1): data tables without `<th>` / `scope`, and header rows made of `<td>`.
+  - `duplicate-id-ref` (1.3.1, 4.1.2): duplicate ids that a `<label for>` or `aria-*` reference points to.
+  - `tailwind-contrast` (1.4.3, medium confidence): `text-*` on `bg-*` classes below 4.5:1 (3:1 for large
+    text), when both colors are known from Tailwind's default palette (v3 and v4) or arbitrary hex values.
+
 ## [0.1.2] - 2026-11-14
 
 ### Changed
