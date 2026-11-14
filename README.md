@@ -245,11 +245,12 @@ Measured on 10 real codebases (React/Next, Vue, SvelteKit, Astro, plain-HTML ext
 | `focus-visible` | pixel-verified: 4 medium-confidence findings, all real (the style-only check had reported 64, 4 of them real) |
 | `keyboard-trap` | 0 findings on 7 real pages (no false alarms) |
 
-Known gaps: `.mdx` files are not scanned; labels and names that come from component props in another file are invisible to the static scan (the runtime scan sees them).
+Known gaps: labels and names that come from component props in another file are invisible to the static scan (the runtime scan sees them).
 
 ## Roadmap
 
-- [ ] MDX files, and resolving labels across files (imported `<Field>`, MUI `<TextField label>`)
+- [x] MDX files (JSX and HTML blocks, plus Markdown headings, links and images; code blocks are skipped)
+- [ ] Resolving labels across files (imported `<Field>`, MUI `<TextField label>`)
 - [ ] Rules: `autocomplete-valid` (1.3.5), `label-in-name` (2.5.3), table headers, duplicate ids, Tailwind contrast from class names
 - [ ] CSS analysis: `outline: none` without `:focus-visible` replacement (2.4.7) in source
 - [ ] Angular template files (`.component.html` works today; inline `template:` strings next)

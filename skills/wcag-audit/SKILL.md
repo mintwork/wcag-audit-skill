@@ -1,6 +1,6 @@
 ---
 name: wcag-audit
-description: Audits web UIs for WCAG 2.2 accessibility (a11y) failures and fixes them. Runs a phased procedure (static source scan of HTML/JSX/TSX/Vue/Svelte/Astro, real-browser runtime scan with axe-core and keyboard checks, adversarial verification of every finding, minimal fixes with explanations, and a machine-readable report). Use when the user asks to audit, check, review or fix accessibility, a11y, WCAG, ADA, Section 508 or EN 301 549 compliance, screen reader or keyboard support, color contrast, alt text, labels or focus, or before shipping UI the agent generated.
+description: Audits web UIs for WCAG 2.2 accessibility (a11y) failures and fixes them. Runs a phased procedure (static source scan of HTML/JSX/TSX/Vue/Svelte/Astro/MDX, real-browser runtime scan with axe-core and keyboard checks, adversarial verification of every finding, minimal fixes with explanations, and a machine-readable report). Use when the user asks to audit, check, review or fix accessibility, a11y, WCAG, ADA, Section 508 or EN 301 549 compliance, screen reader or keyboard support, color contrast, alt text, labels or focus, or before shipping UI the agent generated.
 license: MIT. LICENSE has complete terms
 compatibility: Requires Node.js 22+ for the bundled CLI (npx @mintwork/wcag-audit-skill). The runtime phase needs a Chromium browser (Playwright Chromium, Chrome or Edge) and a reachable URL. Works without the CLI in degraded, manual mode.
 metadata:

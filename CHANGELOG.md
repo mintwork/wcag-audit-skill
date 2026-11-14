@@ -8,6 +8,12 @@ within a minor line.
 
 ## [Unreleased]
 
+### Added
+
+- **MDX files** (`.mdx`) are scanned: JSX and HTML elements and `{expressions}`, plus Markdown headings, links
+  and images, so `heading-order`, `link-name`, `link-text-vague` and image rules apply to docs pages.
+  Frontmatter, ESM blocks and fenced code are skipped; line numbers match the source.
+
 ## [0.1.2] - 2026-11-14
 
 ### Changed

@@ -56,10 +56,10 @@ export function parseMarkup(file: string, source: string, framework: Framework):
   while (i < n) {
     const ch = source[i];
     // Svelte / Astro expressions in text: skip balanced braces so `<` inside is not a tag.
-    if (ch === "{" && (framework === "svelte" || framework === "astro")) {
+    if (ch === "{" && (framework === "svelte" || framework === "astro" || framework === "mdx")) {
       const end = skipBraces(source, i);
       // Astro expressions are JSX: {items.map((i) => <li>…</li>)}, {open && <Modal />}. Parse the markup inside.
-      if (framework === "astro" && /<[A-Za-z]/.test(source.slice(i, end))) {
+      if ((framework === "astro" || framework === "mdx") && /<[A-Za-z]/.test(source.slice(i, end))) {
         astroExprEnds.push(end);
         i++;
         continue;
@@ -194,7 +194,7 @@ export function parseMarkup(file: string, source: string, framework: Framework):
       if (!norm) continue;
       const expr = value === null ? source.slice(j + 1, i - 1) : value;
       if (norm.forceDynamic) dynamic = true;
-      if (value !== null && (TEMPLATE_VALUE.test(value) || ((framework === "svelte" || framework === "astro") && /[{}]/.test(value)))) {
+      if (value !== null && (TEMPLATE_VALUE.test(value) || ((framework === "svelte" || framework === "astro" || framework === "mdx") && /[{}]/.test(value)))) {
         dynamic = true;
       }
       attrs.set(norm.name, {

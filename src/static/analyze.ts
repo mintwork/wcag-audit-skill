@@ -8,6 +8,7 @@ import { type ElementNode, type Framework, type ParsedDocument, truncate } from 
 import { walk } from "./helpers.js";
 import { parseMarkup } from "./parse-html.js";
 import { parseJsx } from "./parse-jsx.js";
+import { parseMdx } from "./parse-mdx.js";
 import { type Report, type RuleContext, rules } from "./rules.js";
 
 export const SUPPORTED_EXTENSIONS: Record<string, Framework> = {
@@ -16,6 +17,7 @@ export const SUPPORTED_EXTENSIONS: Record<string, Framework> = {
   ".vue": "vue",
   ".svelte": "svelte",
   ".astro": "astro",
+  ".mdx": "mdx",
   ".jsx": "jsx",
   ".tsx": "jsx",
   ".js": "jsx",
@@ -40,6 +42,7 @@ export function parseFile(file: string, source: string): ParsedDocument | undefi
     if (!/<[A-Za-z>]/.test(source)) return undefined;
     return parseJsx(file, source);
   }
+  if (fw === "mdx") return parseMdx(file, source);
   return parseMarkup(file, source, fw);
 }
 

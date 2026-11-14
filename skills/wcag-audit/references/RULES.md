@@ -37,6 +37,10 @@ them manually in Phase 1.
 | `no-distracting-elements` | 2.2.2 (A) | serious | `<marquee>`, `<blink>` |
 | `no-autofocus` | 2.4.3, 3.2.1 (A) | minor | `autofocus` outside a dialog |
 
+**MDX** (`.mdx`) is scanned like JSX: JSX / HTML elements and `{expressions}`, plus Markdown headings,
+links and images (`## Title`, `[text](url)`, `![alt](src)`) as `<h2>`, `<a>` and `<img>`. Frontmatter,
+`import` / `export` blocks and fenced code are skipped, and inline code counts as text.
+
 Suppress a reviewed false positive with a comment on the line above the element, *with a
 reason*:
 
