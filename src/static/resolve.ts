@@ -163,7 +163,7 @@ export function createResolver(root: string): ComponentResolver {
         if (wildcard && !prefix && !suffix) continue; // "*": every bare package
         const middle = spec.slice(prefix.length, spec.length - suffix.length);
         for (const t of targets) {
-          const hit = asFile(path.resolve(cfg.baseUrl, t.replace("*", middle)));
+          const hit = asFile(path.resolve(cfg.baseUrl, t.split("*").join(middle)));
           if (hit) return hit;
         }
       }
