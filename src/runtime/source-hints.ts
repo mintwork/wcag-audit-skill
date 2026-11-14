@@ -62,6 +62,32 @@ export function handlesFor(f: Finding): Handle[] {
   return out;
 }
 
+/**
+ * The line where the matched handles cluster: each occurrence of a handle scores its weight on the
+ * lines around it (an element's attributes and text usually span a few lines).
+ */
+function bestLine(lines: string[], via: Handle[]): number {
+  const score = new Float64Array(lines.length);
+  const first = new Int32Array(lines.length).fill(-1);
+  for (const h of via) {
+    for (let i = 0; i < lines.length; i++) {
+      if (!lines[i]!.includes(h.needle)) continue;
+      for (let j = Math.max(0, i - 4); j <= Math.min(lines.length - 1, i + 1); j++) {
+        // Spread toward the opening tag above the attribute, strongest on the line itself.
+        score[j] += h.weight * (j === i ? 1 : 0.6);
+        if (first[j] === -1) first[j] = i;
+      }
+    }
+  }
+  let best = 0;
+  for (let i = 1; i < lines.length; i++) if (score[i]! > score[best]!) best = i;
+  // Report the line of the strongest handle within the winning window, not the window's edge.
+  for (const h of [...via].sort((a, b) => b.weight - a.weight)) {
+    for (let i = Math.max(0, best - 1); i <= Math.min(lines.length - 1, best + 4); i++) if (lines[i]!.includes(h.needle)) return i;
+  }
+  return best;
+}
+
 export interface SourceHintOptions {
   cwd?: string;
   ignore?: string[];
@@ -128,9 +154,8 @@ export async function addSourceHints(results: ScanResult[], sourceDir: string, o
     // Needs one strong handle (test id, id) or two weaker ones that agree, and a clear winner.
     if (!best || best[1].score < 5 || (ranked[1] && ranked[1][1].score >= best[1].score * 0.8)) continue;
     const [file, { via }] = best;
-    const top = [...via].sort((a, b) => b.weight - a.weight)[0]!;
     const lines = contents.get(file)!.split("\n");
-    const idx = lines.findIndex((l) => l.includes(top.needle));
+    const idx = bestLine(lines, via);
     const rel = path.relative(cwd, file).split(path.sep).join("/");
     const hint: SourceHint = { file: rel.startsWith("..") ? file : rel, line: idx + 1, via: via.map((h) => h.label) };
     f.sourceHint = hint;
