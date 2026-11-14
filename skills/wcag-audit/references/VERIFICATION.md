@@ -28,6 +28,7 @@ each one wrong**. Only findings that survive become `confirmed`.
 | `no-div-button` | the handler only stops propagation / the real control is a child `<button>` |
 | `anchor-is-button` | a router intercepts and the `href` is real at runtime |
 | `heading-order` | the component is always rendered under a heading of the right level (check its parents) — still prefer configurable levels |
+| `focus-outline-removed` | another stylesheet or a wrapper component draws the focus state (`:focus-within`, a design-system focus ring), or the element is never keyboard-focusable. Confirm with Tab in the browser (`focus-visible` runtime check) |
 | `video-captions` | the video has no speech (decorative loop) — then add `muted` and reject |
 | `axe/color-contrast` | text is disabled (`disabled` controls are exempt), purely decorative, or a logo |
 | `focus-visible` | focus is shown by a child (e.g. inner `<span>` ring) or a `::before/::after` pseudo-element — inspect styles |

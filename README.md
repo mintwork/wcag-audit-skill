@@ -95,7 +95,7 @@ The skill ([`skills/wcag-audit/SKILL.md`](skills/wcag-audit/SKILL.md)) gives the
 ## CLI
 
 ```bash
-npx @mintwork/wcag-audit-skill scan ./src                        # static: HTML / JSX / TSX / Vue / Svelte / Astro
+npx @mintwork/wcag-audit-skill scan ./src                        # static: HTML / JSX / TSX / Vue / Svelte / Astro / CSS
 npx @mintwork/wcag-audit-skill scan http://localhost:3000        # runtime: axe-core + keyboard checks in Chromium
 npx @mintwork/wcag-audit-skill scan ./dist/index.html --runtime  # open a local file in the browser
 npx @mintwork/wcag-audit-skill scan ./src --json -o a11y.json    # machine-readable
@@ -203,6 +203,7 @@ Inputs: `targets`, `fail-on`, `sarif-file`, `upload-sarif`, `args`, `version` (e
 | `html-lang` | 3.1.1 | serious | missing / invalid `<html lang>` |
 | `document-title` | 2.4.2 | serious | missing / empty `<title>` |
 | `no-positive-tabindex` | 2.4.3 | serious | `tabindex="3"` |
+| `focus-outline-removed` | 2.4.7 | serious | `outline: none` / `outline: 0` in `.css` / `.scss` / `.less` / `<style>`, or Tailwind `outline-none` / `focus:outline-none` on a focusable element, with no `:focus-visible` / `focus:ring` replacement |
 | `iframe-title` | 4.1.2 | serious | untitled iframes |
 | `aria-hidden-focusable` | 4.1.2 | serious | focusable content inside `aria-hidden` |
 | `aria-role-valid` | 4.1.2 | serious | `role="buton"` (suggests `button`) |
@@ -251,7 +252,7 @@ Known gaps: `.mdx` files are not scanned; labels and names that come from compon
 
 - [ ] MDX files, and resolving labels across files (imported `<Field>`, MUI `<TextField label>`)
 - [ ] Rules: `autocomplete-valid` (1.3.5), `label-in-name` (2.5.3), table headers, duplicate ids, Tailwind contrast from class names
-- [ ] CSS analysis: `outline: none` without `:focus-visible` replacement (2.4.7) in source
+- [x] CSS analysis: `outline: none` without `:focus-visible` replacement (2.4.7) in `.css` / `.scss` / `.less`, `<style>` blocks and Tailwind classes (`focus-outline-removed`)
 - [ ] Angular template files (`.component.html` works today; inline `template:` strings next)
 - [ ] Multi-state runtime scans from a config file (open modal, submit empty form, dark mode, 320px)
 - [ ] Authenticated scans via Playwright storage state

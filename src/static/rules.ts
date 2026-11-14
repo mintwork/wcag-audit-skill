@@ -1,6 +1,7 @@
 import type { Confidence, Severity } from "../types.js";
 import { ARIA_ATTRIBUTES, ARIA_ROLES, INTERACTIVE_ROLES, NATIVE_INTERACTIVE, NON_INTERACTIVE_CONTAINERS, closest } from "./aria.js";
 import type { ElementNode, ParsedDocument } from "./ast.js";
+import { focusRules } from "./focus-rules.js";
 import type { Tri } from "./helpers.js";
 import {
   accessibleName,
@@ -651,6 +652,7 @@ export const rules: Rule[] = [
       },
     }),
   },
+  ...focusRules,
   {
     meta: {
       id: "aria-role-valid",

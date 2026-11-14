@@ -61,7 +61,8 @@ npx @mintwork/wcag-audit-skill scan <path> --json -o .wcag-audit/static.json --f
 
 Then read [references/STATIC-SCAN.md](references/STATIC-SCAN.md) and do the review the tool
 cannot: custom components that wrap native elements, conditional rendering, design-system
-props (`<Icon label=…>`), CSS that hides focus (`outline: none`), color-only state, and
+props (`<Icon label=…>`), focus styles removed in CSS-in-JS or replaced in another stylesheet
+(the CLI checks `.css` / `.scss` / `.less` and Tailwind classes one file at a time), color-only state, and
 anything the scanner skipped because of spread props or dynamic values. Add those as
 candidate findings with `"source": "static"` and `"confidence": "medium"`.
 

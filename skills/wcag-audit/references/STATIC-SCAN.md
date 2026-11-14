@@ -31,7 +31,7 @@ Most real-world a11y bugs live in shared components the scanner treats as opaque
 
 ```bash
 rg -n "<IconButton(?![^>]*aria-label)(?![^>]*label=)" --pcre2 src
-rg -n "outline:\s*(none|0)" --glob '*.{css,scss,less,tsx,jsx,vue,svelte}' src
+rg -n "outline:\s*(none|0)" --glob '*.{ts,tsx,js,jsx}' src   # CSS-in-JS; stylesheets are scanned
 rg -n "onClick=" src | rg -v "<(button|a|input|select|summary|[A-Z])"
 ```
 
@@ -39,7 +39,7 @@ rg -n "onClick=" src | rg -v "<(button|a|input|select|summary|[A-Z])"
 
 | Pattern | WCAG | What to check |
 | --- | --- | --- |
-| `outline: none` / `outline: 0` / Tailwind `outline-none`, `focus:outline-none` | 2.4.7 | Is there a replacement `:focus-visible` style (`ring`, `box-shadow`, border)? |
+| `outline: none` in CSS-in-JS (styled-components, emotion), or in a stylesheet whose replacement lives in another file | 2.4.7 | The scanner checks `.css` / `.scss` / `.less`, `<style>` and Tailwind classes (`focus-outline-removed`), one stylesheet at a time. Is there a replacement `:focus-visible` style (`ring`, `box-shadow`, border)? |
 | Color-only state (red border = error, green dot = online) | 1.4.1 | Is there text, an icon with a name, or `aria-invalid` + message? |
 | Form errors | 3.3.1, 4.1.3 | Error text linked via `aria-describedby`; `aria-invalid="true"`; announced (`role="alert"` or live region) |
 | Custom select / combobox / menu / tabs | 4.1.2, 2.1.1 | Matches the ARIA APG pattern: roles, `aria-expanded`, arrow keys, Escape |

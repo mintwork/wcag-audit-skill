@@ -4,7 +4,8 @@ import path from "node:path";
 import type { Finding, ScanResult } from "../types.js";
 import { TOOL } from "../version.js";
 import { levelFor, understandingUrl } from "../wcag.js";
-import { type ElementNode, type Framework, type ParsedDocument, truncate } from "./ast.js";
+import { type ElementNode, type Framework, type ParsedDocument, createRoot, truncate } from "./ast.js";
+import { outlineIssues, styleBlocks } from "./css.js";
 import { walk } from "./helpers.js";
 import { parseMarkup } from "./parse-html.js";
 import { parseJsx } from "./parse-jsx.js";
@@ -21,6 +22,10 @@ export const SUPPORTED_EXTENSIONS: Record<string, Framework> = {
   ".js": "jsx",
   ".mjs": "jsx",
 };
+
+/** Stylesheets: checked for focus outlines removed without a replacement (focus-outline-removed). */
+export const STYLE_EXTENSIONS: Record<string, "css" | "scss" | "less"> = { ".css": "css", ".scss": "scss", ".less": "less" };
+const CSS_RULE = "focus-outline-removed";
 
 const DEFAULT_IGNORES = new Set(["node_modules", ".git", "dist", "build", "out", ".next", ".nuxt", ".svelte-kit", ".output", "coverage", "vendor", ".turbo", ".cache", "__tests__", "__mocks__", "tests", "e2e", "cypress", "storybook-static", "playwright-report", "test", "fixtures", "__fixtures__", "__snapshots__", "venv", "site-packages", "bower_components"]);
 
@@ -45,9 +50,12 @@ export function parseFile(file: string, source: string): ParsedDocument | undefi
 
 /** Analyze an in-memory source string. `file` determines the parser (by extension). */
 export function analyzeSource(file: string, source: string, opts: StaticOptions = {}): Finding[] {
+  if (/wcag-audit-ignore-file/.test(source)) return [];
+  const cssActive = !opts.rules?.length || opts.rules.includes(CSS_RULE);
+  const dialect = STYLE_EXTENSIONS[path.extname(file).toLowerCase()];
+  if (dialect) return cssActive ? dedupeIds(stylesheetFindings(file, source, [{ css: source, offset: 0, dialect }])) : [];
   const doc = parseFile(file, source);
   if (!doc) return [];
-  if (/wcag-audit-ignore-file/.test(source)) return [];
   const lines = source.split("\n");
   const labelTargets = new Set<string>();
   let hasDynamicLabelTarget = false;
@@ -76,8 +84,26 @@ export function analyzeSource(file: string, source: string, opts: StaticOptions 
     if (handlers.element) for (const el of all) handlers.element(el);
     handlers.done?.();
   }
+  // <style> blocks in HTML / Vue / Svelte / Astro.
+  if (cssActive && doc.framework !== "jsx" && /<style\b/i.test(source)) out.push(...stylesheetFindings(file, source, styleBlocks(source)));
   out.sort((a, b) => (a.location.line ?? 0) - (b.location.line ?? 0) || a.ruleId.localeCompare(b.ruleId));
   return dedupeIds(out);
+}
+
+function stylesheetFindings(file: string, source: string, blocks: Array<{ css: string; offset: number; dialect: "css" | "scss" | "less" }>): Finding[] {
+  const meta = rules.find((r) => r.meta.id === CSS_RULE)!.meta;
+  const lines = source.split("\n");
+  const doc = { file } as ParsedDocument;
+  const out: Finding[] = [];
+  for (const b of blocks) {
+    for (const issue of outlineIssues(b.css, b.dialect, b.offset, source)) {
+      // A synthetic element carries the position and evidence of the CSS rule.
+      const el: ElementNode = { ...createRoot(), tag: "#css", line: issue.line, column: issue.column, openTag: issue.evidence };
+      if (isSuppressed(lines, el, CSS_RULE)) continue;
+      out.push(toFinding(doc, meta, { el, message: issue.message, fix: issue.fix, confidence: issue.confidence }));
+    }
+  }
+  return out;
 }
 
 function isSuppressed(lines: string[], el: ElementNode, ruleId: string): boolean {
@@ -139,13 +165,19 @@ export async function collectFiles(target: string, ignore: string[] = []): Promi
       if (e.isDirectory()) {
         if (e.name.startsWith(".") && e.name !== ".") continue;
         await recurse(full);
-      } else if (e.isFile() && SUPPORTED_EXTENSIONS[path.extname(e.name).toLowerCase()] && !/\.(test|spec|stories)\.[jt]sx?$/.test(e.name) && !e.name.endsWith(".min.js")) {
+      } else if (e.isFile() && isScannable(e.name)) {
         out.push(full);
       }
     }
   };
   await recurse(target);
   return out.sort();
+}
+
+function isScannable(name: string): boolean {
+  const ext = path.extname(name).toLowerCase();
+  if (!SUPPORTED_EXTENSIONS[ext] && !STYLE_EXTENSIONS[ext]) return false;
+  return !/\.(test|spec|stories)\.[jt]sx?$/.test(name) && !/\.min\.(js|css)$/.test(name) && !/\.module\.css\.d\.ts$/.test(name);
 }
 
 export async function scanStatic(target: string, opts: StaticOptions = {}): Promise<ScanResult> {

@@ -6,7 +6,7 @@ user impact in context during verification (see SKILL.md, "Severity").
 ## Static rules (source code)
 
 Run by `wcag-audit-skill scan <path>`. Parsers: HTML, JSX/TSX (Babel), Vue SFC templates,
-Svelte, Astro. Elements with spread props (`{...props}`, `v-bind="obj"`) and dynamic
+Svelte, Astro, and stylesheets (`.css`, `.scss`, `.less`, `<style>` blocks) for focus outlines. Elements with spread props (`{...props}`, `v-bind="obj"`) and dynamic
 values are treated as unknown and **not** reported, to keep false positives low — review
 them manually in Phase 1.
 
@@ -28,6 +28,7 @@ them manually in Phase 1.
 | `html-lang` | 3.1.1 (A) | serious | `<html>` without `lang`, or an invalid BCP 47 tag |
 | `document-title` | 2.4.2 (A) | serious | full HTML document without a non-empty `<title>` |
 | `no-positive-tabindex` | 2.4.3 (A) | serious | `tabindex` greater than 0 |
+| `focus-outline-removed` | 2.4.7 (AA) | serious | **Stylesheets** (`.css`, `.scss`, `.less`, and `<style>` in HTML / Vue / Svelte / Astro): `outline: none` / `0` / `transparent`, `outline-style: none`, `outline-width: 0` or `@apply outline-none` on a `:focus` / `:focus-visible` selector or a focusable one (`a`, `button`, `select`, `[tabindex]`, `.btn`, …) when no focus rule in the same stylesheet replaces it (box-shadow, border, background, a mixin, `:focus-within` / `:has(:focus-visible)` on a wrapper). High confidence for plain CSS `:focus` rules; SCSS / Less partials and broad selectors are medium. **Classes**: Tailwind `outline-none` / `outline-hidden` / `focus:outline-none` on a focusable native element with no `focus:` / `focus-visible:` ring, outline, border, shadow or background class, no `focus-within:` wrapper and no `group-focus` / `peer-focus` indicator. Skipped: `:focus:not(:focus-visible)`, text inputs and textareas (the caret shows focus), `tabindex="-1"`, composite widgets (`listbox`, `menu`, `grid`, `aria-activedescendant`), components (their own definitions are checked), generated Tailwind CSS |
 | `iframe-title` | 4.1.2 (A) | serious | `<iframe>` without `title` |
 | `aria-hidden-focusable` | 4.1.2 (A) | serious | focusable element on or inside `aria-hidden="true"` |
 | `aria-role-valid` | 4.1.2 (A) | serious | `role` value is not a WAI-ARIA role (suggests the closest, e.g. `buton` → `button`) |
