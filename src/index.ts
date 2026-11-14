@@ -5,3 +5,4 @@ export { rules } from "./static/rules.js";
 export { formatText, formatJson, formatSarif } from "./report/index.js";
 export { WCAG } from "./wcag.js";
 export * from "./types.js";
+export { fixSource, planFixes, writeFixes, unifiedDiff, FIXABLE_RULES, type FileFix, type FixOptions } from "./fix.js";

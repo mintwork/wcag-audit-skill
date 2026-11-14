@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFile, writeFile } from "node:fs/promises";
+import { FIXABLE_RULES, planFixes, unifiedDiff, writeFixes } from "./fix.js";
 import { parseArgs } from "node:util";
 import { counts, formatJson, formatSarif, formatText, where } from "./report/index.js";
 import { type ScanOptions, scan, verifyReport } from "./scan.js";
@@ -30,6 +31,13 @@ Filtering & CI
   --min-confidence <c>   drop findings below high|medium|low (default: low)
   --rules <ids>          comma-separated static rule ids to run
   --ignore <names>       comma-separated directory/file names to skip
+
+Fixing (static targets)
+  --fix                  fix mechanical findings in place: html-lang (repair "en_US", "English"),
+                         meta-viewport-zoom (drop user-scalable=no / maximum-scale), aria-attr-valid
+                         typos (aria-lable → aria-label). The diff is always printed first.
+  --dry-run              print the diff of --fix without writing anything (implies --fix)
+  --lang <code>          with --fix: add lang="<code>" to <html> elements that have none (never guessed)
 
 Runtime
   --level <A|AA|AAA>     WCAG level for axe-core (default: AA)
@@ -62,6 +70,9 @@ async function main(argv: string[]): Promise<number> {
       "no-keyboard": { type: "boolean" },
       "no-verify": { type: "boolean" },
       runtime: { type: "boolean" },
+      fix: { type: "boolean" },
+      "dry-run": { type: "boolean" },
+      lang: { type: "string" },
       "wait-for": { type: "string" },
       browser: { type: "string" },
       headed: { type: "boolean" },
@@ -135,8 +146,29 @@ async function main(argv: string[]): Promise<number> {
   if (command !== "scan") return usage(`Unknown command "${command}"`);
   if (!targets.length) return usage("scan needs at least one <path|url>");
 
-  const results: ScanResult[] = [];
+  let results: ScanResult[] = [];
   for (const t of targets) results.push(await scan(t, opts));
+
+  if (values.fix || values["dry-run"]) {
+    const dryRun = !!values["dry-run"];
+    const files = results.filter((r) => r.kind === "static").flatMap((r) => r.findings.filter((f) => FIXABLE_RULES.includes(f.ruleId)).map((f) => f.location.file!));
+    const plan = await planFixes(files, { lang: values.lang });
+    const diff = plan.map((f) => unifiedDiff(f.file, f.before, f.after)).filter(Boolean).join("\n");
+    // The diff goes to stdout, unless stdout carries the JSON / SARIF report.
+    const machineStdout = (values.json || values.sarif) && !values.output;
+    if (diff) (machineStdout ? process.stderr : process.stdout).write(diff + "\n\n");
+    for (const f of plan) for (const s of f.skipped) console.error(`${TOOL.name}: not fixed: ${s.ruleId} at ${f.file}:${s.line} (${s.reason})`);
+    const fixed = plan.reduce((n, f) => n + f.applied.length, 0);
+    const changedFiles = plan.filter((f) => f.after !== f.before).length;
+    if (dryRun) {
+      console.error(`${TOOL.name}: dry run: ${fixed} finding${fixed === 1 ? "" : "s"} fixable in ${changedFiles} file${changedFiles === 1 ? "" : "s"}; nothing written.`);
+    } else {
+      await writeFixes(plan);
+      console.error(`${TOOL.name}: fixed ${fixed} finding${fixed === 1 ? "" : "s"} in ${changedFiles} file${changedFiles === 1 ? "" : "s"}.`);
+      // Report what is left.
+      if (changedFiles) results = await Promise.all(targets.map((t) => scan(t, opts)));
+    }
+  }
 
   const out = values.sarif ? formatSarif(results) : values.json ? formatJson(results) : formatText(results);
   await emit(out, values.output);

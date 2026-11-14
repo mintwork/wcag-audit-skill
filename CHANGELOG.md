@@ -8,6 +8,13 @@ within a minor line.
 
 ## [Unreleased]
 
+### Added
+
+- **`--fix` and `--dry-run`** for mechanical findings: `html-lang` (repairs `en_US`, `English`; adds a missing
+  `lang` only with `--lang <code>`), `meta-viewport-zoom` (drops `user-scalable=no` / low `maximum-scale`) and
+  unambiguous `aria-attr-valid` typos. A unified diff is always printed before files are written; `--dry-run`
+  prints it and writes nothing. Exported as `planFixes`, `writeFixes`, `fixSource` and `unifiedDiff`.
+
 ## [0.1.2] - 2026-11-14
 
 ### Changed

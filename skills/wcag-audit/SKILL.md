@@ -107,6 +107,10 @@ Fix `confirmed` findings, highest severity first, using
 3. Ask before fixes that change visible UI or copy (contrast colors, new visible labels,
    link text) unless the user already said to go ahead.
 
+Mechanical findings (`html-lang` repairs, `meta-viewport-zoom`, `aria-attr-valid` typos) can be
+fixed by the CLI: run `scan <path> --dry-run`, show the user the diff, then `scan <path> --fix`.
+A missing `lang` is only added with `--lang <code>` once you know the page's language.
+
 Then re-verify mechanically:
 
 ```bash
