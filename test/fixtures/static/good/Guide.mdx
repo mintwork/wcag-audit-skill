@@ -1,0 +1,36 @@
+---
+title: Getting started
+---
+import { Callout } from "./Callout";
+import Image from "next/image";
+
+export const meta = {
+  section: "docs",
+};
+
+# Getting started
+
+Install the CLI with `npm i <pkg>` and read the [configuration guide](/docs/config).
+Links to [`scan --json`](/docs/json) keep their code text. See <https://example.com>.
+
+```html
+<!-- Code samples are not scanned -->
+<img src="logo.png">
+<div onclick="go()">Go</div>
+```
+
+## Options
+
+<Callout type="info">Options can also go in a config file.</Callout>
+
+![Diagram of the three scan phases](/phases.png)
+![](/divider.png)
+
+<Image src="/hero.png" alt="Terminal running a scan" width={600} height={300} />
+
+<label htmlFor="q">Search the docs</label>
+<input id="q" type="search" />
+
+### Advanced
+
+{props.links.map((l) => <a href={l.href}>{l.title}</a>)}

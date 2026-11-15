@@ -1,6 +1,6 @@
 ---
 name: wcag-audit
-description: Audits web UIs for WCAG 2.2 accessibility (a11y) failures and fixes them. Runs a phased procedure (static source scan of HTML/JSX/TSX/Vue/Svelte/Astro, real-browser runtime scan with axe-core and keyboard checks, adversarial verification of every finding, minimal fixes with explanations, and a machine-readable report). Use when the user asks to audit, check, review or fix accessibility, a11y, WCAG, ADA, Section 508 or EN 301 549 compliance, screen reader or keyboard support, color contrast, alt text, labels or focus, or before shipping UI the agent generated.
+description: Audits web UIs for WCAG 2.2 accessibility (a11y) failures and fixes them. Runs a phased procedure (static source scan of HTML/JSX/TSX/Vue/Svelte/Astro/MDX, real-browser runtime scan with axe-core and keyboard checks, adversarial verification of every finding, minimal fixes with explanations, and a machine-readable report). Use when the user asks to audit, check, review or fix accessibility, a11y, WCAG, ADA, Section 508 or EN 301 549 compliance, screen reader or keyboard support, color contrast, alt text, labels or focus, or before shipping UI the agent generated.
 license: MIT. LICENSE has complete terms
 compatibility: Requires Node.js 22+ for the bundled CLI (npx @mintwork/wcag-audit-skill). The runtime phase needs a Chromium browser (Playwright Chromium, Chrome or Edge) and a reachable URL. Works without the CLI in degraded, manual mode.
 metadata:
@@ -46,7 +46,8 @@ list in [references/RULES.md](references/RULES.md) by reading the source yoursel
 Phase 2 unless the user's environment offers another browser tool.
 
 Write all artifacts to `.wcag-audit/` at the repository root (create it; suggest adding it
-to `.gitignore`). Never write anywhere else unless the user asks.
+to `.gitignore`, keeping `.wcag-audit/baseline.json` if the project commits a CI baseline).
+Never write anywhere else unless the user asks.
 
 ## Workflow
 
@@ -61,7 +62,8 @@ npx @mintwork/wcag-audit-skill scan <path> --json -o .wcag-audit/static.json --f
 
 Then read [references/STATIC-SCAN.md](references/STATIC-SCAN.md) and do the review the tool
 cannot: custom components that wrap native elements, conditional rendering, design-system
-props (`<Icon label=…>`), CSS that hides focus (`outline: none`), color-only state, and
+props (`<Icon label=…>`), focus styles removed in CSS-in-JS or replaced in another stylesheet
+(the CLI checks `.css` / `.scss` / `.less` and Tailwind classes one file at a time), color-only state, and
 anything the scanner skipped because of spread props or dynamic values. Add those as
 candidate findings with `"source": "static"` and `"confidence": "medium"`.
 

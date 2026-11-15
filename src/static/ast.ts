@@ -3,7 +3,7 @@
  * sources are all normalized into this shape so rules are written once.
  */
 
-export type Framework = "html" | "vue" | "svelte" | "astro" | "jsx";
+export type Framework = "html" | "vue" | "svelte" | "astro" | "mdx" | "jsx";
 
 export interface Attr {
   /** Normalized, lowercase attribute name (className -> class, @click -> onclick). */
@@ -128,7 +128,7 @@ export function normalizeAttrName(
   let name = raw;
   let forceDynamic = false;
 
-  if (framework === "jsx") {
+  if (framework === "jsx" || framework === "mdx") {
     if (name === "className") name = "class";
     else if (name === "htmlFor") name = "for";
     return { name: name.toLowerCase(), forceDynamic };
