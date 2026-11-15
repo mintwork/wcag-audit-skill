@@ -8,10 +8,22 @@ within a minor line.
 
 ## [Unreleased]
 
+### Added
+
+- **Baseline file**: `scan --write-baseline` records the current findings in `.wcag-audit/baseline.json`
+  (or the `--baseline <file>` path); `scan --baseline <file>` then reports and fails only on findings that
+  are not in it. Matching uses the stable finding ids. A `--json` report also works as a baseline. The JSON
+  summary gains `baselined`, and the GitHub Action a `baseline` input.
+
 ### Fixed
 
 - Suppression comments with a reason (`wcag-audit-ignore img-alt: tracking pixel`), the documented form, now
   suppress the finding. The colon and the words of the reason were read as rule ids, so nothing was suppressed.
+- The static HTML scanner ends comments where browsers do (`--!>`, `<!-->`, `<!--->`), so markup
+  after such a comment is no longer skipped, and a suppression comment ending in `--!>` no longer
+  silences every rule on the next line.
+- The keyboard audit passes selectors to the page as data (`page.evaluate(fn, selector)`) instead of
+  splicing them into code strings.
 
 ## [0.1.2] - 2026-11-14
 
