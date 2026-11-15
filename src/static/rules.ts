@@ -1,7 +1,10 @@
 import type { Confidence, Severity } from "../types.js";
 import { ARIA_ATTRIBUTES, ARIA_ROLES, INTERACTIVE_ROLES, NATIVE_INTERACTIVE, NON_INTERACTIVE_CONTAINERS, closest } from "./aria.js";
 import type { ElementNode, ParsedDocument } from "./ast.js";
+import { LABEL_WRAPPER, designSystemInput, designSystemInputLabelled, thinControl } from "./form-components.js";
+import { focusRules } from "./focus-rules.js";
 import type { Tri } from "./helpers.js";
+import { moreRules } from "./more-rules.js";
 import {
   accessibleName,
   ancestor,
@@ -42,8 +45,17 @@ export interface Report {
   severity?: Severity;
 }
 
+/** Where a component is defined: its top-level JSX trees, and the file (undefined = this file). */
+export interface ResolvedComponent {
+  trees: ElementNode[];
+  file: string | undefined;
+  doc: ParsedDocument;
+}
+
 export interface RuleContext {
   doc: ParsedDocument;
+  /** The definition of a component used in this file (same file, or imported when a resolver is available). */
+  resolveComponent?(el: ElementNode): ResolvedComponent | undefined;
   /** Every static `for`/`htmlFor` value on <label> in this file. */
   labelTargets: Set<string>;
   /** Some <label for> in this file is bound to an expression. */
@@ -130,7 +142,7 @@ function walkContains(root: ElementNode, target: ElementNode): boolean {
  * and none has for/htmlFor or wraps {children}.
  */
 function wrapperAssociatesLabel(ctx: RuleContext, wrapper: ElementNode): Tri {
-  const defs = ctx.doc.components?.get(wrapper.tag);
+  const defs = (ctx.resolveComponent?.(wrapper) ?? (ctx.doc.components?.get(wrapper.tag) ? { trees: ctx.doc.components.get(wrapper.tag)! } : undefined))?.trees;
   if (!defs?.length) return "unknown";
   const labels: ElementNode[] = [];
   let rendersChildren = false;
@@ -259,17 +271,35 @@ export const rules: Rule[] = [
     },
     create: (ctx) => ({
       element(el) {
-        if (!["input", "select", "textarea"].includes(el.tag)) return;
+        let tag = el.tag;
+        /** Set when a project component (<Input>) renders the control: report at medium confidence, naming it. */
+        let thin: ReturnType<typeof thinControl>;
+        if (el.isComponent) {
+          const ds = designSystemInput(ctx, el);
+          if (ds) {
+            if (designSystemInputLabelled(ctx, el, ds)) return;
+            ctx.report({
+              el,
+              confidence: "medium",
+              message: `<${el.tag}> (${ds.pkg}) has no label${has(el, "placeholder") ? " (a placeholder is not a label)" : ""}, so the input it renders is announced without a name.`,
+              fix: ds.fix,
+            });
+            return;
+          }
+          thin = thinControl(ctx, el);
+          if (!thin) return;
+          tag = thin.tag;
+        } else if (!["input", "select", "textarea"].includes(el.tag)) return;
         if (el.hasSpread) return;
-        if (el.tag === "input") {
+        if (tag === "input") {
           const type = attr(el, "type");
           // type={show ? "text" : "password"}: fine to check when every possible value needs a label.
           if (type?.dynamic && !onlyLabelableTypes(type.expr)) return;
-          if (INPUT_TYPES_WITHOUT_LABEL.has((type?.value ?? "text").toLowerCase())) return;
+          if (INPUT_TYPES_WITHOUT_LABEL.has((type?.value ?? thin?.type ?? "text").toLowerCase())) return;
         }
         if (isAriaHidden(el)) return;
         if (nameFromAttrs(el) !== "no") return;
-        const wrapper = ancestor(el, (p) => p.tag === "label" || (p.isComponent && /label|field/i.test(p.tag)));
+        const wrapper = ancestor(el, (p) => p.tag === "label" || (p.isComponent && LABEL_WRAPPER.test(p.tag)));
         let viaWrapper = false;
         if (wrapper) {
           if (wrapper.tag === "label" || wrapperAssociatesLabel(ctx, wrapper) !== "no") return;
@@ -281,24 +311,26 @@ export const rules: Rule[] = [
         if (id?.value && ctx.hasDynamicLabelTarget) return;
         const placeholder = has(el, "placeholder");
         const orphanLabel = el.parent?.children.some(
-          (c) => c.type === "element" && c.tag === "label" && !has(c, "for") && ![...walk(c)].some((d) => ["input", "select", "textarea"].includes(d.tag)),
+          (c) => c.type === "element" && c.tag === "label" && !has(c, "for") && ![...walk(c)].some((d) => d.isComponent || ["input", "select", "textarea"].includes(d.tag)),
         );
         if (viaWrapper) {
+          const where = ctx.resolveComponent?.(wrapper!)?.file;
           ctx.report({
             el,
             confidence: "medium",
-            message: `<${wrapper!.tag}> (defined in this file) renders a <label> that is neither wrapping this control nor pointing at it with for/htmlFor, so the control has no programmatic label.`,
+            message: `<${wrapper!.tag}> (defined in ${where ?? "this file"}) renders a <label> that is neither wrapping this control nor pointing at it with for/htmlFor, so the control has no programmatic label.`,
             fix: `In <${wrapper!.tag}>, give the control an id (e.g. from useId()) and render <label htmlFor={id}>, or wrap {children} inside the <label>. Or add aria-label here.`,
           });
           return;
         }
         ctx.report({
           el,
-          message: orphanLabel
+          ...(thin ? { confidence: "medium" as const } : {}),
+          message: (thin ? `<${el.tag}> renders an <${tag}> (defined in ${thin.file ?? "this file"}) and gets no label here. ` : "") + (orphanLabel
             ? "A <label> sits next to this control but is not associated with it (no for/htmlFor), so screen readers announce an unlabeled field."
             : placeholder
               ? "Control relies on placeholder text, which disappears on input and is not a reliable label."
-              : "Form control has no programmatic label.",
+              : "Form control has no programmatic label."),
           fix: id?.value
             ? `Add <label for="${id.value}">…</label>, or aria-label="…".`
             : 'Wrap it in <label>Text <input …></label>, or give it an id and add <label for="that-id">, or aria-label="…".',
@@ -651,6 +683,7 @@ export const rules: Rule[] = [
       },
     }),
   },
+  ...focusRules,
   {
     meta: {
       id: "aria-role-valid",
@@ -787,6 +820,7 @@ export const rules: Rule[] = [
       },
     }),
   },
+  ...moreRules,
 ];
 
 export const ruleById = new Map(rules.map((r) => [r.meta.id, r]));

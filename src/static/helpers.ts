@@ -170,8 +170,9 @@ function isStopOnlyHandler(el: ElementNode, name: string): boolean {
   if (!m) return false;
   const v = m[1]!;
   const stmts = m[2]!.split(/[;\n]/).map((x) => x.trim()).filter(Boolean);
-  const call = new RegExp(`^${v.replace(/\$/g, "\\$")}\\.(stopPropagation|preventDefault|stopImmediatePropagation)\\(\\)$`);
-  return stmts.length > 0 && stmts.every((x) => call.test(x)) && stmts.some((x) => /stop/.test(x));
+  // Compare whole statements as strings rather than building a RegExp from the parameter name.
+  const calls = new Set(["stopPropagation", "preventDefault", "stopImmediatePropagation"].map((f) => `${v}.${f}()`));
+  return stmts.length > 0 && stmts.every((x) => calls.has(x)) && stmts.some((x) => /stop/.test(x));
 }
 
 /** True if every click-like handler on the element only stops propagation. */

@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
+import { DEFAULT_BASELINE, applyBaseline, readBaseline, writeBaseline } from "./baseline.js";
+import { FIXABLE_RULES, planFixes, unifiedDiff, writeFixes } from "./fix.js";
 import { type ScanJob, jobsFromConfig, loadRuntimeConfig } from "./runtime/states.js";
 import { parseArgs } from "node:util";
 import { counts, formatJson, formatSarif, formatText, where } from "./report/index.js";
@@ -32,6 +34,17 @@ Filtering & CI
   --min-confidence <c>   drop findings below high|medium|low (default: low)
   --rules <ids>          comma-separated static rule ids to run
   --ignore <names>       comma-separated directory/file names to skip
+  --baseline <file>      report (and fail on) only findings that are not in this baseline file,
+                         e.g. ${DEFAULT_BASELINE}; a --json report also works as a baseline
+  --write-baseline       record all current findings in the --baseline file (default
+                         ${DEFAULT_BASELINE}) and exit 0
+
+Fixing (static targets)
+  --fix                  fix mechanical findings in place: html-lang (repair "en_US", "English"),
+                         meta-viewport-zoom (drop user-scalable=no / maximum-scale), aria-attr-valid
+                         typos (aria-lable → aria-label). The diff is always printed first.
+  --dry-run              print the diff of --fix without writing anything (implies --fix)
+  --lang <code>          with --fix: add lang="<code>" to <html> elements that have none (never guessed)
 
 Runtime
   --level <A|AA|AAA>     WCAG level for axe-core (default: AA)
@@ -64,11 +77,16 @@ async function main(argv: string[]): Promise<number> {
       "min-confidence": { type: "string" },
       rules: { type: "string" },
       ignore: { type: "string" },
+      baseline: { type: "string" },
+      "write-baseline": { type: "boolean" },
       level: { type: "string" },
       "best-practice": { type: "boolean" },
       "no-keyboard": { type: "boolean" },
       "no-verify": { type: "boolean" },
       runtime: { type: "boolean" },
+      fix: { type: "boolean" },
+      "dry-run": { type: "boolean" },
+      lang: { type: "string" },
       "wait-for": { type: "string" },
       config: { type: "string" },
       "storage-state": { type: "string" },
@@ -161,9 +179,45 @@ async function main(argv: string[]): Promise<number> {
   if (storageState && !existsSync(storageState)) return usage(`storage state file not found: ${storageState}`);
   opts.storageState = storageState;
 
-  const results: ScanResult[] = [];
+  const baselineFile = values.baseline || DEFAULT_BASELINE;
+  // Read the baseline before scanning, so a missing file fails fast.
+  const known = values.baseline !== undefined && !values["write-baseline"] ? await readBaseline(baselineFile) : undefined;
+
+  let results: ScanResult[] = [];
   for (const t of targets) results.push(await scan(t, opts));
   if (config) results.push(...(await scanJobs(jobsFromConfig(config), opts)));
+
+  if (values.fix || values["dry-run"]) {
+    const dryRun = !!values["dry-run"];
+    const files = results.filter((r) => r.kind === "static").flatMap((r) => r.findings.filter((f) => FIXABLE_RULES.includes(f.ruleId)).map((f) => f.location.file!));
+    const plan = await planFixes(files, { lang: values.lang });
+    const diff = plan.map((f) => unifiedDiff(f.file, f.before, f.after)).filter(Boolean).join("\n");
+    // The diff goes to stdout, unless stdout carries the JSON / SARIF report.
+    const machineStdout = (values.json || values.sarif) && !values.output;
+    if (diff) (machineStdout ? process.stderr : process.stdout).write(diff + "\n\n");
+    for (const f of plan) for (const s of f.skipped) console.error(`${TOOL.name}: not fixed: ${s.ruleId} at ${f.file}:${s.line} (${s.reason})`);
+    const fixed = plan.reduce((n, f) => n + f.applied.length, 0);
+    const changedFiles = plan.filter((f) => f.after !== f.before).length;
+    if (dryRun) {
+      console.error(`${TOOL.name}: dry run: ${fixed} finding${fixed === 1 ? "" : "s"} fixable in ${changedFiles} file${changedFiles === 1 ? "" : "s"}; nothing written.`);
+    } else {
+      await writeFixes(plan);
+      console.error(`${TOOL.name}: fixed ${fixed} finding${fixed === 1 ? "" : "s"} in ${changedFiles} file${changedFiles === 1 ? "" : "s"}.`);
+      // Report what is left.
+      // Re-scan only the static results; runtime results (URLs, --config states) are unaffected.
+      if (changedFiles) results = await Promise.all(results.map((r) => (r.kind === "static" ? scan(r.target, opts) : r)));
+    }
+  }
+
+  if (values["write-baseline"]) {
+    const b = await writeBaseline(baselineFile, results);
+    console.error(`${TOOL.name}: wrote ${baselineFile} (${b.findings.length} known finding${b.findings.length === 1 ? "" : "s"}). Commit it and scan with --baseline ${baselineFile}.`);
+    return 0;
+  }
+  if (known) {
+    const b = applyBaseline(results, known);
+    if (b.stale) console.error(`${TOOL.name}: ${b.stale} baseline entr${b.stale === 1 ? "y" : "ies"} no longer found (fixed or moved); run with --write-baseline to prune.`);
+  }
 
   const out = values.sarif ? formatSarif(results) : values.json ? formatJson(results) : formatText(results);
   await emit(out, values.output);

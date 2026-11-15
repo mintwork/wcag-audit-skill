@@ -39,6 +39,13 @@ Write alt from what the image *communicates in context*. Derive it from nearby c
 file names only as a hint, or the image itself if you can view it. If unsure →
 `needs_validation`, ask the user. Never `alt="image"`.
 
+## Mechanical fixes (CLI)
+
+`html-lang` repairs, `meta-viewport-zoom` and `aria-attr-valid` typos have one correct answer, so
+the CLI can apply them: `npx @mintwork/wcag-audit-skill scan <path> --dry-run` prints a unified diff,
+`--fix` applies it (add `--lang <code>` for a missing `lang` once you know the language). Show
+the user the diff before `--fix`.
+
 ## Unlabeled input (`form-label`, 1.3.1 / 3.3.2 / 4.1.2)
 
 ```jsx

@@ -60,4 +60,6 @@ export interface ScanResult {
   discarded: number;
   /** Runtime only: the state the page was brought into before scanning (replayed by verify). */
   state?: import("./runtime/states.js").RuntimeState;
+  /** Findings hidden because they are in the --baseline file. */
+  baselined?: number;
 }
