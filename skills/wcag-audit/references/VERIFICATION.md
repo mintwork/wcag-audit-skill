@@ -29,6 +29,11 @@ each one wrong**. Only findings that survive become `confirmed`.
 | `anchor-is-button` | a router intercepts and the `href` is real at runtime |
 | `heading-order` | the component is always rendered under a heading of the right level (check its parents) — still prefer configurable levels |
 | `focus-outline-removed` | another stylesheet or a wrapper component draws the focus state (`:focus-within`, a design-system focus ring), or the element is never keyboard-focusable. Confirm with Tab in the browser (`focus-visible` runtime check) |
+| `autocomplete-valid` | never a false positive for an invalid token, but 1.3.5 only applies to fields collecting data *about the user*: an invalid value on a search or filter box is minor hygiene |
+| `label-in-name` | the visible text is not the label (e.g. a counter badge), or the name starts with the visible text in another form the user would speak |
+| `table-headers` | the table is purely for layout (then add `role="presentation"`), or headers are added by a component the scan did not see |
+| `duplicate-id-ref` | the two elements never render at the same time (check the branches and routes) |
+| `tailwind-contrast` | the project overrides that palette color (`tailwind.config` `theme.colors`, a v4 `@theme` block), the text is disabled or decorative, or something else (image, overlay, sibling) sits behind the text. Confirm with `axe/color-contrast` at runtime when possible |
 | `video-captions` | the video has no speech (decorative loop) — then add `muted` and reject |
 | `axe/color-contrast` | text is disabled (`disabled` controls are exempt), purely decorative, or a logo |
 | `focus-visible` | focus is shown by a child (e.g. inner `<span>` ring) or a `::before/::after` pseudo-element — inspect styles |

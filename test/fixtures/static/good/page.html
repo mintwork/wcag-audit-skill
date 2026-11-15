@@ -11,11 +11,24 @@
   <img src="/hero.png" alt="Three ceramic mugs on a wooden shelf">
   <img src="/divider.png" alt="">
   <label for="email">Email</label>
-  <input id="email" type="email" placeholder="you@example.com">
+  <input id="email" type="email" autocomplete="email" placeholder="you@example.com">
+  <label for="ship-zip">Shipping postcode</label>
+  <input id="ship-zip" autocomplete="section-ship shipping postal-code">
+  <label for="work-phone">Work phone</label>
+  <input id="work-phone" type="tel" autocomplete="work tel" aria-describedby="phone-hint">
+  <p id="phone-hint" class="bg-white text-gray-700">Office hours only</p>
   <label>Name <input type="text" name="name"></label>
   <button type="button" onclick="buy()">Buy now</button>
   <button type="button" aria-label="Close"><svg class="icon" aria-hidden="true"></svg></button>
-  <a href="/cart">Cart</a>
+  <a href="/cart" aria-label="Cart, 2 items">Cart</a>
+  <button type="button" aria-label="Close dialog">×</button>
+  <table>
+    <caption>Shipping rates</caption>
+    <tr><th scope="col">Region</th><th scope="col">Price</th></tr>
+    <tr><td>EU</td><td>€5</td></tr>
+  </table>
+  <table role="presentation"><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table>
+  <div class="bg-gray-900 text-white"><span class="text-gray-300">Dark card</span> <span class="text-gray-400">·</span></div>
   <button type="button" onclick="openMenu()">Menu</button>
   <iframe src="https://example.com/embed" title="Product demo"></iframe>
   <div role="button" tabindex="0" onclick="toggle()" onkeydown="toggleKey(event)">Toggle</div>

@@ -86,7 +86,7 @@ The skill ([`skills/wcag-audit/SKILL.md`](skills/wcag-audit/SKILL.md)) gives the
 
 | Phase | What happens | Output |
 | --- | --- | --- |
-| **1. Static scan** | CLI parses HTML, JSX/TSX, Vue, Svelte, Astro and checks 24 rules. The agent then reviews what tools miss: shared components, `outline: none`, color-only state. | `.wcag-audit/static.json` |
+| **1. Static scan** | CLI parses HTML, JSX/TSX, Vue, Svelte, Astro and checks 30 rules. The agent then reviews what tools miss: shared components, focus styles in CSS-in-JS, color-only state. | `.wcag-audit/static.json` |
 | **2. Runtime scan** | Starts your dev server, opens pages in real Chromium, runs **axe-core**, and **tabs through the page** to catch keyboard traps and invisible focus. | `.wcag-audit/runtime.json` |
 | **3. Verification** | Each candidate is re-checked to *disprove* it: trace props and spreads, check the rendered DOM. Verdict: `confirmed`, `needs_validation`, or `rejected`. Runtime violations are re-run automatically and dropped if they don't reproduce. | verdicts |
 | **4. Fix** | Minimal, native-HTML-first fixes in your framework's idiom, each explained (what was wrong, who it affected, what changed). Visual/copy changes need your OK. Never invents alt text. | diffs + `verify` |
@@ -109,6 +109,8 @@ npx @mintwork/wcag-audit-skill rules                             # list rules + 
 | `--fail-on <sev>` | exit 1 at `critical`/`serious`/`moderate`/`minor` (default `minor`) or `none` |
 | `--min-confidence <c>` | drop findings below `high`/`medium` |
 | `--rules a,b` / `--ignore dir,dir` | select rules / skip directories |
+| `--baseline <file>` | report and fail only on findings not in the baseline (see [Baseline](#baseline-fail-only-on-new-findings)) |
+| `--write-baseline` | record the current findings in the `--baseline` file (default `.wcag-audit/baseline.json`) and exit 0 |
 | `--level A\|AA\|AAA` | runtime WCAG level (default `AA`) |
 | `--best-practice` | add axe best-practice rules |
 | `--wait-for <selector>` | SPA readiness |
@@ -140,6 +142,17 @@ Exit codes: `0` clean, `1` findings at or above `--fail-on`, `2` usage or runtim
 ```
 
 Runtime findings carry `location.url` + `location.selector` and `"verified": true`. IDs are stable fingerprints (rule + file + element), so they survive line moves and power `verify`.
+
+### Baseline: fail only on new findings
+
+Adopting the scanner on an existing codebase? Record today's findings once, commit the file, and CI fails only on findings that are not in it:
+
+```bash
+npx @mintwork/wcag-audit-skill scan src --write-baseline                         # writes .wcag-audit/baseline.json
+npx @mintwork/wcag-audit-skill scan src --baseline .wcag-audit/baseline.json     # reports new findings only
+```
+
+Matching uses the finding `id` (rule + file + opening tag), so moved lines stay known, while a renamed file or an edited opening tag counts as new. Run both commands from the same directory (paths in ids are relative to it). Entries that no longer match are reported on stderr; re-run `--write-baseline` to prune them. A `--json` report also works as a baseline. If `.wcag-audit/` is git-ignored, keep the baseline with `!.wcag-audit/baseline.json`.
 
 ### False positives, kept low on purpose
 
@@ -179,7 +192,7 @@ Findings appear as PR annotations and under **Security → Code scanning**. Or u
           fail-on: serious
 ```
 
-Inputs: `targets`, `fail-on`, `sarif-file`, `upload-sarif`, `args`, `version` (empty = the action's own ref; set an npm version to run the published package). A runtime job (start app → scan URLs) is in [`examples/github-action.yml`](examples/github-action.yml); the action itself is [`action.yml`](action.yml).
+Inputs: `targets`, `fail-on`, `sarif-file`, `upload-sarif`, `baseline` (path to a committed baseline file: only new findings are reported and fail the step), `args`, `version` (empty = the action's own ref; set an npm version to run the published package). A runtime job (start app → scan URLs) is in [`examples/github-action.yml`](examples/github-action.yml); the action itself is [`action.yml`](action.yml).
 
 ## Rules
 
@@ -212,6 +225,11 @@ Inputs: `targets`, `fail-on`, `sarif-file`, `upload-sarif`, `args`, `version` (e
 | `video-captions` | 1.2.2 | serious | `<video>` without captions track |
 | `no-distracting-elements` | 2.2.2 | serious | `<marquee>`, `<blink>` |
 | `no-autofocus` | 2.4.3, 3.2.1 | minor | `autofocus` outside dialogs |
+| `autocomplete-valid` | 1.3.5 | serious | `autocomplete="emial"`, `"firstname"`, `"work name"` (suggests the token) |
+| `label-in-name` | 2.5.3 | serious | `aria-label="Open navigation"` on a button that reads "Menu" |
+| `table-headers` | 1.3.1 | serious | data tables without `<th>` / `scope`, header rows made of `<td>` |
+| `duplicate-id-ref` | 1.3.1, 4.1.2 | serious | duplicate `id` that a `<label for>` or `aria-*` reference points to |
+| `tailwind-contrast` | 1.4.3 | serious | `text-gray-400` on `bg-white` and other default-palette pairs below 4.5:1 (3:1 large); medium confidence |
 
 ### Runtime (browser)
 
@@ -251,14 +269,14 @@ Known gaps: `.mdx` files are not scanned; labels and names that come from compon
 ## Roadmap
 
 - [ ] MDX files, and resolving labels across files (imported `<Field>`, MUI `<TextField label>`)
-- [ ] Rules: `autocomplete-valid` (1.3.5), `label-in-name` (2.5.3), table headers, duplicate ids, Tailwind contrast from class names
+- [x] Rules: `autocomplete-valid` (1.3.5), `label-in-name` (2.5.3), `table-headers`, `duplicate-id-ref`, `tailwind-contrast` (Tailwind contrast from class names)
 - [x] CSS analysis: `outline: none` without `:focus-visible` replacement (2.4.7) in `.css` / `.scss` / `.less`, `<style>` blocks and Tailwind classes (`focus-outline-removed`)
 - [ ] Angular template files (`.component.html` works today; inline `template:` strings next)
 - [ ] Multi-state runtime scans from a config file (open modal, submit empty form, dark mode, 320px)
 - [ ] Authenticated scans via Playwright storage state
 - [ ] Map runtime selectors back to source files automatically (React DevTools / source maps)
 - [ ] `--fix` for mechanical rules (`html-lang`, `meta-viewport-zoom`, `aria-attr-valid` typos)
-- [ ] Baseline file to fail CI only on new findings
+- [x] Baseline file to fail CI only on new findings (`--baseline`, `--write-baseline`, action input `baseline`)
 - [ ] Storybook integration: scan every story
 
 Have an idea or a false positive? [Open an issue](CONTRIBUTING.md) with a minimal snippet.

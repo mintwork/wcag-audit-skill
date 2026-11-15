@@ -10,7 +10,9 @@ npx @mintwork/wcag-audit-skill rules            # what it checks
 ```
 
 Useful flags: `--ignore storybook,fixtures`, `--rules form-label,button-name`,
-`--min-confidence high`. The scanner skips `node_modules`, build output, tests and stories.
+`--min-confidence high`. If the project commits a baseline (`.wcag-audit/baseline.json`), audit
+without `--baseline` so known issues are reviewed too; CI uses it to fail only on new findings.
+The scanner skips `node_modules`, build output, tests and stories.
 
 Read the JSON, not just the summary. Group findings by component: ten `button-name`
 findings in ten pages often trace back to **one** `IconButton` component.
@@ -69,7 +71,9 @@ rg -n "onClick=" src | rg -v "<(button|a|input|select|summary|[A-Z])"
 - **Astro**: frontmatter is skipped; framework islands (`.tsx`, `.vue`, `.svelte`) are
   scanned by their own parsers.
 - **Tailwind**: `sr-only` for hidden labels; `focus-visible:ring-2` as the focus style;
-  check `text-gray-400` on white (fails 4.5:1).
+  `tailwind-contrast` checks `text-*` on `bg-*` only when both are static default-palette
+  classes. Review pairs it skips: `cn()` / `clsx()` classes, theme colors (`text-muted-foreground`),
+  `dark:` variants and opacity.
 
 Record each manual candidate with `source: "static"`, the file and line, and
 `confidence: "medium"` until Phase 3 confirms it.

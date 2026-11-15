@@ -21,6 +21,10 @@ inputs:
     description: "Upload the SARIF file to GitHub code scanning (needs security-events: write; private repositories need GitHub Advanced Security)"
     required: false
     default: "true"
+  baseline:
+    description: "Path to a baseline file (written with --write-baseline, e.g. .wcag-audit/baseline.json). Findings recorded in it are not reported and do not fail the step; only new findings do."
+    required: false
+    default: ""
   args:
     description: "Extra CLI arguments, e.g. --ignore storybook --level AA"
     required: false
@@ -56,6 +60,7 @@ runs:
         WCAG_FAIL_ON: ${{ inputs.fail-on }}
         WCAG_SARIF: ${{ inputs.sarif-file }}
         WCAG_ARGS: ${{ inputs.args }}
+        WCAG_BASELINE: ${{ inputs.baseline }}
         WCAG_VERSION: ${{ inputs.version }}
         WCAG_ACTION_PATH: ${{ github.action_path }}
       run: |
@@ -65,9 +70,11 @@ runs:
         else
           cmd=(node "$WCAG_ACTION_PATH/dist/cli.js")
         fi
+        baseline=()
+        if [ -n "$WCAG_BASELINE" ]; then baseline=(--baseline "$WCAG_BASELINE"); fi
         # Targets and args are word-split on purpose (space-separated lists).
         # shellcheck disable=SC2086
-        "${cmd[@]}" scan $WCAG_TARGETS --sarif -o "$WCAG_SARIF" --fail-on "$WCAG_FAIL_ON" $WCAG_ARGS
+        "${cmd[@]}" scan $WCAG_TARGETS --sarif -o "$WCAG_SARIF" --fail-on "$WCAG_FAIL_ON" "${baseline[@]}" $WCAG_ARGS
         code=$?
         echo "exit-code=$code" >> "$GITHUB_OUTPUT"
         if [ "$code" -ge 2 ]; then echo "::error::wcag-audit-skill exited with $code"; fi

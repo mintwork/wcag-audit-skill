@@ -46,7 +46,8 @@ list in [references/RULES.md](references/RULES.md) by reading the source yoursel
 Phase 2 unless the user's environment offers another browser tool.
 
 Write all artifacts to `.wcag-audit/` at the repository root (create it; suggest adding it
-to `.gitignore`). Never write anywhere else unless the user asks.
+to `.gitignore`, keeping `.wcag-audit/baseline.json` if the project commits a CI baseline).
+Never write anywhere else unless the user asks.
 
 ## Workflow
 

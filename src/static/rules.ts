@@ -3,6 +3,7 @@ import { ARIA_ATTRIBUTES, ARIA_ROLES, INTERACTIVE_ROLES, NATIVE_INTERACTIVE, NON
 import type { ElementNode, ParsedDocument } from "./ast.js";
 import { focusRules } from "./focus-rules.js";
 import type { Tri } from "./helpers.js";
+import { moreRules } from "./more-rules.js";
 import {
   accessibleName,
   ancestor,
@@ -789,6 +790,7 @@ export const rules: Rule[] = [
       },
     }),
   },
+  ...moreRules,
 ];
 
 export const ruleById = new Map(rules.map((r) => [r.meta.id, r]));
