@@ -16,4 +16,5 @@ jobs:
     if: github.event.workflow_run.conclusion == 'failure'
     runs-on: ubuntu-26.04
     steps:
-      - uses: mintwork/whatbroke@v0
+      # Pinned to a full commit SHA (immutable); bump it for new releases.
+      - uses: mintwork/whatbroke@f55b72dc7d23682626140a19c8fa82a6a185c219 # v0.1.2
