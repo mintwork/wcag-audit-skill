@@ -151,11 +151,17 @@ Runtime findings carry `location.url` + `location.selector` and `"verified": tru
 npx @mintwork/wcag-audit-skill scan src --dry-run            # print the diff, write nothing
 npx @mintwork/wcag-audit-skill scan src --fix --lang en      # print the diff, apply it, report what is left
 ```
+
 `--fix` handles the findings with exactly one correct answer: `html-lang` (`lang="en_US"` → `en-US`, `"English"` → `en`; a missing `lang` only with `--lang`, never guessed), `meta-viewport-zoom` (drops `user-scalable=no` and `maximum-scale` below 2, keeps the rest) and `aria-attr-valid` typos (`aria-lable` → `aria-label`, only when one attribute is the obvious match and it isn't already set). The diff is always printed before anything is written (to stderr when stdout carries `--json` / `--sarif`), files keep their line count, and suppressed findings are left alone. Everything else needs judgment: that's the agent's Phase 4.
 ### Baseline: fail only on new findings
+
 Adopting the scanner on an existing codebase? Record today's findings once, commit the file, and CI fails only on findings that are not in it:
+
+```bash
 npx @mintwork/wcag-audit-skill scan src --write-baseline                         # writes .wcag-audit/baseline.json
 npx @mintwork/wcag-audit-skill scan src --baseline .wcag-audit/baseline.json     # reports new findings only
+```
+
 Matching uses the finding `id` (rule + file + opening tag), so moved lines stay known, while a renamed file or an edited opening tag counts as new. Run both commands from the same directory (paths in ids are relative to it). Entries that no longer match are reported on stderr; re-run `--write-baseline` to prune them. A `--json` report also works as a baseline. If `.wcag-audit/` is git-ignored, keep the baseline with `!.wcag-audit/baseline.json`.
 
 ### False positives, kept low on purpose
