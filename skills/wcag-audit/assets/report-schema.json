@@ -26,7 +26,8 @@
         "line": { "type": "integer", "minimum": 1 },
         "column": { "type": "integer", "minimum": 1 },
         "url": { "type": "string" },
-        "selector": { "type": "string" }
+        "selector": { "type": "string" },
+        "state": { "type": "string", "description": "Runtime state the finding was seen in (from scan --config), e.g. \"dialog open\"" }
       },
       "anyOf": [{ "required": ["file"] }, { "required": ["url"] }]
     },

@@ -65,7 +65,7 @@ describe("static scan: known-bad fixtures", () => {
 });
 
 describe("static scan: clean fixtures produce zero findings", () => {
-  for (const file of ["page.html", "ProductCard.tsx", "Signup.vue", "Nav.svelte", "hero.component.ts"]) {
+  for (const file of ["page.html", "ProductCard.tsx", "Signup.vue", "Nav.svelte", "styles.scss", "Guide.mdx", "hero.component.ts"]) {
     it(file, async () => {
       const r = await scanStatic(path.join(FIX, "good", file));
       expect(r.findings).toEqual([]);
@@ -153,6 +153,18 @@ describe("false-positive guards", () => {
     expect(run("a.html", `<!-- wcag-audit-ignore img-alt -->\n<img src="x.png">`)).toEqual([]);
     expect(run("a.html", `<!-- wcag-audit-ignore link-name -->\n<img src="x.png">`)).toEqual(["img-alt"]);
     expect(run("a.html", `<!-- wcag-audit-ignore-file -->\n<img src="x.png">`)).toEqual([]);
+    // The documented form, with a reason after a colon.
+    expect(run("a.html", `<!-- wcag-audit-ignore img-alt: tracking pixel, hidden from AT -->\n<img src="x.png">`)).toEqual([]);
+    expect(run("a.tsx", `const A = () => <>\n{/* wcag-audit-ignore img-alt, link-name: decorative */}\n<img src="x.png" /></>;`)).toEqual([]);
+    expect(run("a.html", `<!-- wcag-audit-ignore link-name: not this one -->\n<img src="x.png">`)).toEqual(["img-alt"]);
+  });
+
+  it("parses suppression ids up to any comment terminator, so a malformed id never silences every rule", () => {
+    // `--!>` also ends an HTML comment; the id before it must still be read as `link-name`.
+    expect(run("a.html", `<!-- wcag-audit-ignore link-name--!>\n<img src="x.png">`)).toEqual(["img-alt"]);
+    expect(run("a.html", `<!-- wcag-audit-ignore link-name-->\n<img src="x.png">`)).toEqual(["img-alt"]);
+    expect(run("a.html", `<!-- wcag-audit-ignore img-alt--!>\n<img src="x.png">`)).toEqual([]);
+    expect(run("a.tsx", `const A = () => <>{/* wcag-audit-ignore link-name*/}\n<img src="x.png" /></>;`)).toEqual(["img-alt"]);
   });
 
   it("allows decorative images and dialog autofocus", () => {

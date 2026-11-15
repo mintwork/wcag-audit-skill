@@ -1,5 +1,5 @@
 import axe from "axe-core";
-import type { Page } from "playwright-core";
+import type { Browser, Page } from "playwright-core";
 import { fingerprint } from "../static/analyze.js";
 import { truncate } from "../static/ast.js";
 import type { Finding, ScanResult, Severity } from "../types.js";
@@ -8,6 +8,7 @@ import { criteriaFromAxeTags, levelFor } from "../wcag.js";
 import { AXE_FIXES } from "./axe-fixes.js";
 import { type LaunchOptions, launchBrowser } from "./browser.js";
 import { keyboardAudit } from "./keyboard.js";
+import { type RuntimeState, runSteps } from "./states.js";
 
 export interface RuntimeOptions extends LaunchOptions {
   /** WCAG level to test against. Default AA. */
@@ -22,6 +23,13 @@ export interface RuntimeOptions extends LaunchOptions {
   waitFor?: string;
   timeoutMs?: number;
   viewport?: { width: number; height: number };
+  /** Playwright storage state file (cookies + localStorage) for authenticated pages. */
+  storageState?: string;
+  colorScheme?: "light" | "dark";
+  /** Bring the page into a state (open a modal, dark mode, 320px) before scanning. */
+  state?: RuntimeState;
+  /** Reuse an open browser (multi-state scans); it is not closed. */
+  browser?: Browser;
 }
 
 interface AxeNode {
@@ -66,13 +74,20 @@ function targetToSelector(target: unknown[]): string {
 
 export async function scanUrl(url: string, opts: RuntimeOptions = {}): Promise<ScanResult> {
   const started = Date.now();
-  const browser = await launchBrowser(opts);
+  const browser = opts.browser ?? (await launchBrowser(opts));
+  const state = opts.state;
   try {
-    const context = await browser.newContext({ viewport: opts.viewport ?? { width: 1280, height: 800 } });
+    const context = await browser.newContext({
+      viewport: state?.viewport ?? opts.viewport ?? { width: 1280, height: 800 },
+      colorScheme: state?.colorScheme ?? opts.colorScheme,
+      reducedMotion: state?.reducedMotion,
+      storageState: opts.storageState,
+    });
     const page = await context.newPage();
     await page.goto(url, { waitUntil: "load", timeout: opts.timeoutMs ?? 30_000 });
     if (opts.waitFor) await page.waitForSelector(opts.waitFor, { timeout: opts.timeoutMs ?? 30_000 });
     await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => {});
+    if (state?.steps?.length) await runSteps(page, state.steps, Math.min(opts.timeoutMs ?? 10_000, 10_000));
 
     // evaluate() is not subject to the page's CSP, unlike addScriptTag.
     await page.evaluate(axe.source);
@@ -124,7 +139,16 @@ export async function scanUrl(url: string, opts: RuntimeOptions = {}): Promise<S
     }
 
     if (opts.keyboard !== false) {
-      findings.push(...(await keyboardAudit(page, url)));
+      // In a state reached by clicking (an open modal), a click to reset focus could close it again.
+      findings.push(...(await keyboardAudit(page, url, { noMouse: !!state?.steps?.length })));
+    }
+
+    // The same element in another state is a different finding (for verify and baselines).
+    if (state) {
+      for (const f of findings) {
+        f.id = fingerprint(f.id, "state", state.name);
+        f.location.state = state.name;
+      }
     }
 
     await context.close();
@@ -136,9 +160,10 @@ export async function scanUrl(url: string, opts: RuntimeOptions = {}): Promise<S
       durationMs: Date.now() - started,
       findings,
       discarded,
+      ...(state ? { state } : {}),
     };
   } finally {
-    await browser.close();
+    if (!opts.browser) await browser.close();
   }
 }
 

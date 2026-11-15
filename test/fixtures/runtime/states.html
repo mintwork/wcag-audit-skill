@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>States – Example</title>
+  <style>
+    body { font-family: system-ui, sans-serif; color: #1a1a1a; background: #ffffff; }
+    :focus-visible { outline: 3px solid #1a5fb4; outline-offset: 2px; }
+    button { min-width: 44px; min-height: 44px; margin: 8px; }
+    .mobile-menu { display: none; }
+    @media (max-width: 400px) { .mobile-menu { display: inline-block; } }
+    .note { color: #1a1a1a; background: #ffffff; }
+    @media (prefers-color-scheme: dark) { .note { color: #3a3a3a; background: #222222; } }
+    .error { color: #b3b3b3; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Settings</h1>
+    <p class="note">Changes are saved automatically.</p>
+    <button type="button" class="mobile-menu"><svg width="16" height="16" aria-hidden="true"><rect width="16" height="16"/></svg></button>
+    <button type="button" id="open">Open settings</button>
+    <div id="dialog" role="dialog" aria-modal="true" aria-label="Settings" hidden>
+      <input type="text" id="nickname">
+      <button type="button" id="close">Close</button>
+    </div>
+    <form id="form" novalidate>
+      <label for="email">Email</label>
+      <input type="email" id="email" required>
+      <p id="error" class="error" hidden>Enter an email address.</p>
+      <button type="submit">Save</button>
+    </form>
+  </main>
+  <script>
+    const dialog = document.getElementById("dialog");
+    document.getElementById("open").onclick = () => { dialog.hidden = false; document.getElementById("nickname").focus(); };
+    document.getElementById("close").onclick = () => { dialog.hidden = true; };
+    document.getElementById("form").onsubmit = (e) => { e.preventDefault(); if (!document.getElementById("email").value) document.getElementById("error").hidden = false; };
+  </script>
+</body>
+</html>

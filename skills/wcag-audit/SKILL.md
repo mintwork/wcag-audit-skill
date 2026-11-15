@@ -1,6 +1,6 @@
 ---
 name: wcag-audit
-description: Audits web UIs for WCAG 2.2 accessibility (a11y) failures and fixes them. Runs a phased procedure (static source scan of HTML/JSX/TSX/Vue/Svelte/Astro, real-browser runtime scan with axe-core and keyboard checks, adversarial verification of every finding, minimal fixes with explanations, and a machine-readable report). Use when the user asks to audit, check, review or fix accessibility, a11y, WCAG, ADA, Section 508 or EN 301 549 compliance, screen reader or keyboard support, color contrast, alt text, labels or focus, or before shipping UI the agent generated.
+description: Audits web UIs for WCAG 2.2 accessibility (a11y) failures and fixes them. Runs a phased procedure (static source scan of HTML/JSX/TSX/Vue/Svelte/Astro/MDX, real-browser runtime scan with axe-core and keyboard checks, adversarial verification of every finding, minimal fixes with explanations, and a machine-readable report). Use when the user asks to audit, check, review or fix accessibility, a11y, WCAG, ADA, Section 508 or EN 301 549 compliance, screen reader or keyboard support, color contrast, alt text, labels or focus, or before shipping UI the agent generated.
 license: MIT. LICENSE has complete terms
 compatibility: Requires Node.js 22+ for the bundled CLI (npx @mintwork/wcag-audit-skill). The runtime phase needs a Chromium browser (Playwright Chromium, Chrome or Edge) and a reachable URL. Works without the CLI in degraded, manual mode.
 metadata:
@@ -46,7 +46,8 @@ list in [references/RULES.md](references/RULES.md) by reading the source yoursel
 Phase 2 unless the user's environment offers another browser tool.
 
 Write all artifacts to `.wcag-audit/` at the repository root (create it; suggest adding it
-to `.gitignore`). Never write anywhere else unless the user asks.
+to `.gitignore`, keeping `.wcag-audit/baseline.json` if the project commits a CI baseline).
+Never write anywhere else unless the user asks.
 
 ## Workflow
 
@@ -61,7 +62,8 @@ npx @mintwork/wcag-audit-skill scan <path> --json -o .wcag-audit/static.json --f
 
 Then read [references/STATIC-SCAN.md](references/STATIC-SCAN.md) and do the review the tool
 cannot: custom components that wrap native elements, conditional rendering, design-system
-props (`<Icon label=…>`), CSS that hides focus (`outline: none`), color-only state, and
+props (`<Icon label=…>`), focus styles removed in CSS-in-JS or replaced in another stylesheet
+(the CLI checks `.css` / `.scss` / `.less` and Tailwind classes one file at a time), color-only state, and
 anything the scanner skipped because of spread props or dynamic values. Add those as
 candidate findings with `"source": "static"` and `"confidence": "medium"`.
 
@@ -78,7 +80,9 @@ npx @mintwork/wcag-audit-skill scan http://localhost:3000/login http://localhost
 
 Scan the pages that matter (home, primary flows, forms, modals open) — see
 [references/RUNTIME-SCAN.md](references/RUNTIME-SCAN.md) for states to cover, SPA waits
-and auth. Runtime findings catch what static analysis cannot: computed contrast, real
+and auth. Put states (open a modal, submit an empty form, dark mode, 320px) in a config and
+run `scan --config .wcag-audit/config.json`; for logged-in pages use `--storage-state <file>`
+from the user, never credentials. Runtime findings catch what static analysis cannot: computed contrast, real
 accessible names, focus order, keyboard traps, invisible focus.
 
 ### Phase 3 — Verification (remove false positives)
@@ -106,6 +110,10 @@ Fix `confirmed` findings, highest severity first, using
 2. Explain it in one or two sentences: *what was wrong, who it affected, what changed.*
 3. Ask before fixes that change visible UI or copy (contrast colors, new visible labels,
    link text) unless the user already said to go ahead.
+
+Mechanical findings (`html-lang` repairs, `meta-viewport-zoom`, `aria-attr-valid` typos) can be
+fixed by the CLI: run `scan <path> --dry-run`, show the user the diff, then `scan <path> --fix`.
+A missing `lang` is only added with `--lang <code>` once you know the page's language.
 
 Then re-verify mechanically:
 
