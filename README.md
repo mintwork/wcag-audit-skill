@@ -153,6 +153,7 @@ npx @mintwork/wcag-audit-skill scan src --fix --lang en      # print the diff, a
 ```
 
 `--fix` handles the findings with exactly one correct answer: `html-lang` (`lang="en_US"` → `en-US`, `"English"` → `en`; a missing `lang` only with `--lang`, never guessed), `meta-viewport-zoom` (drops `user-scalable=no` and `maximum-scale` below 2, keeps the rest) and `aria-attr-valid` typos (`aria-lable` → `aria-label`, only when one attribute is the obvious match and it isn't already set). The diff is always printed before anything is written (to stderr when stdout carries `--json` / `--sarif`), files keep their line count, and suppressed findings are left alone. Everything else needs judgment: that's the agent's Phase 4.
+
 ### Baseline: fail only on new findings
 
 Adopting the scanner on an existing codebase? Record today's findings once, commit the file, and CI fails only on findings that are not in it:
