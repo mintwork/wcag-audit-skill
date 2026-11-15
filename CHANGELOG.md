@@ -10,14 +10,17 @@ within a minor line.
 
 ### Added
 
-- **New static rules** (29 in total), each mapped to WCAG 2.2 and documented in `references/RULES.md`:
-  - `autocomplete-valid` (1.3.5): invalid `autocomplete` values, with the intended token for typos and
-    common aliases (`emial` → `email`, `firstname` → `given-name`, `work name` → `name`).
-  - `label-in-name` (2.5.3): `aria-label` that does not contain the control's visible text.
-  - `table-headers` (1.3.1): data tables without `<th>` / `scope`, and header rows made of `<td>`.
-  - `duplicate-id-ref` (1.3.1, 4.1.2): duplicate ids that a `<label for>` or `aria-*` reference points to.
-  - `tailwind-contrast` (1.4.3, medium confidence): `text-*` on `bg-*` classes below 4.5:1 (3:1 for large
-    text), when both colors are known from Tailwind's default palette (v3 and v4) or arbitrary hex values.
+
+
+### Fixed
+
+- Suppression comments with a reason (`wcag-audit-ignore img-alt: tracking pixel`), the documented form, now
+  suppress the finding. The colon and the words of the reason were read as rule ids, so nothing was suppressed.
+- The static HTML scanner ends comments where browsers do (`--!>`, `<!-->`, `<!--->`), so markup
+  after such a comment is no longer skipped, and a suppression comment ending in `--!>` no longer
+  silences every rule on the next line.
+- The keyboard audit passes selectors to the page as data (`page.evaluate(fn, selector)`) instead of
+  splicing them into code strings.
 
 ## [0.1.2] - 2026-11-14
 

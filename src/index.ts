@@ -5,3 +5,4 @@ export { rules } from "./static/rules.js";
 export { formatText, formatJson, formatSarif } from "./report/index.js";
 export { WCAG } from "./wcag.js";
 export * from "./types.js";
+export { applyBaseline, createBaseline, readBaseline, writeBaseline, DEFAULT_BASELINE, type Baseline, type BaselineEntry } from "./baseline.js";

@@ -86,7 +86,9 @@ function isSuppressed(lines: string[], el: ElementNode, ruleId: string): boolean
     if (text === undefined) continue;
     const m = /wcag-audit-ignore(?!-file)(?:-next-line)?\b([^\n]*)/.exec(text);
     if (!m) continue;
-    const ids = m[1]!.replace(/(-->|\*\/|\}|\*)/g, " ").trim().split(/[\s,]+/).filter((s) => /^[a-z][a-z-]+$/.test(s));
+    // "wcag-audit-ignore img-alt, link-name: reason": rule ids come before the colon, the reason after.
+    const spec = m[1]!.replace(/--!?>|\*\/|\}|\*/g, " ").split(":")[0]!;
+    const ids = spec.trim().split(/[\s,]+/).filter((s) => /^[a-z][a-z-]+$/.test(s));
     if (!ids.length || ids.includes(ruleId)) return true;
   }
   return false;

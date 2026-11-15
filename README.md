@@ -109,6 +109,8 @@ npx @mintwork/wcag-audit-skill rules                             # list rules + 
 | `--fail-on <sev>` | exit 1 at `critical`/`serious`/`moderate`/`minor` (default `minor`) or `none` |
 | `--min-confidence <c>` | drop findings below `high`/`medium` |
 | `--rules a,b` / `--ignore dir,dir` | select rules / skip directories |
+| `--baseline <file>` | report and fail only on findings not in the baseline (see [Baseline](#baseline-fail-only-on-new-findings)) |
+| `--write-baseline` | record the current findings in the `--baseline` file (default `.wcag-audit/baseline.json`) and exit 0 |
 | `--level A\|AA\|AAA` | runtime WCAG level (default `AA`) |
 | `--best-practice` | add axe best-practice rules |
 | `--wait-for <selector>` | SPA readiness |
@@ -140,6 +142,17 @@ Exit codes: `0` clean, `1` findings at or above `--fail-on`, `2` usage or runtim
 ```
 
 Runtime findings carry `location.url` + `location.selector` and `"verified": true`. IDs are stable fingerprints (rule + file + element), so they survive line moves and power `verify`.
+
+### Baseline: fail only on new findings
+
+Adopting the scanner on an existing codebase? Record today's findings once, commit the file, and CI fails only on findings that are not in it:
+
+```bash
+npx @mintwork/wcag-audit-skill scan src --write-baseline                         # writes .wcag-audit/baseline.json
+npx @mintwork/wcag-audit-skill scan src --baseline .wcag-audit/baseline.json     # reports new findings only
+```
+
+Matching uses the finding `id` (rule + file + opening tag), so moved lines stay known, while a renamed file or an edited opening tag counts as new. Run both commands from the same directory (paths in ids are relative to it). Entries that no longer match are reported on stderr; re-run `--write-baseline` to prune them. A `--json` report also works as a baseline. If `.wcag-audit/` is git-ignored, keep the baseline with `!.wcag-audit/baseline.json`.
 
 ### False positives, kept low on purpose
 
@@ -179,7 +192,7 @@ Findings appear as PR annotations and under **Security → Code scanning**. Or u
           fail-on: serious
 ```
 
-Inputs: `targets`, `fail-on`, `sarif-file`, `upload-sarif`, `args`, `version` (empty = the action's own ref; set an npm version to run the published package). A runtime job (start app → scan URLs) is in [`examples/github-action.yml`](examples/github-action.yml); the action itself is [`action.yml`](action.yml).
+Inputs: `targets`, `fail-on`, `sarif-file`, `upload-sarif`, `baseline` (path to a committed baseline file: only new findings are reported and fail the step), `args`, `version` (empty = the action's own ref; set an npm version to run the published package). A runtime job (start app → scan URLs) is in [`examples/github-action.yml`](examples/github-action.yml); the action itself is [`action.yml`](action.yml).
 
 ## Rules
 
@@ -262,7 +275,7 @@ Known gaps: `.mdx` files are not scanned; labels and names that come from compon
 - [ ] Authenticated scans via Playwright storage state
 - [ ] Map runtime selectors back to source files automatically (React DevTools / source maps)
 - [ ] `--fix` for mechanical rules (`html-lang`, `meta-viewport-zoom`, `aria-attr-valid` typos)
-- [ ] Baseline file to fail CI only on new findings
+- [x] Baseline file to fail CI only on new findings (`--baseline`, `--write-baseline`, action input `baseline`)
 - [ ] Storybook integration: scan every story
 
 Have an idea or a false positive? [Open an issue](CONTRIBUTING.md) with a minimal snippet.
