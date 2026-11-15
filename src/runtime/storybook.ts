@@ -52,6 +52,8 @@ export function filterStories(stories: Story[], patterns?: string): Story[] {
 }
 
 async function fetchJson(url: string): Promise<{ status: number; data?: unknown }> {
+  // The Storybook the user pointed the scan at (its index.json); fetching it is the point.
+  // nosemgrep
   const res = await fetch(url);
   if (!res.ok) return { status: res.status };
   return { status: res.status, data: await res.json() };

@@ -1,0 +1,5 @@
+# Codacy: paths that don't ship to users. Test fixtures are inaccessible on purpose: they're what
+# the audit is tested against.
+exclude_paths:
+  - "test/fixtures/**"
+  - "scripts/demo-gif.mjs"
