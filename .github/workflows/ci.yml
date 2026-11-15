@@ -57,6 +57,15 @@ jobs:
           targets: test/fixtures/static/bad
           sarif-file: bad.sarif
           upload-sarif: "false"
+      - name: Baseline of the bad fixtures
+        run: node dist/cli.js scan test/fixtures/static/bad --write-baseline --baseline bad-baseline.json
+      - name: Bad fixtures pass with a baseline (no new findings)
+        uses: ./
+        with:
+          targets: test/fixtures/static/bad
+          baseline: bad-baseline.json
+          sarif-file: baselined.sarif
+          upload-sarif: "false"
       - name: Check results
         env:
           EXIT_CODE: ${{ steps.bad.outputs.exit-code }}
@@ -64,3 +73,4 @@ jobs:
         run: |
           test "$EXIT_CODE" = "1" && test "$OUTCOME" = "failure"
           node -e 'const s=JSON.parse(require("fs").readFileSync("bad.sarif","utf8")); if (!s.runs[0].results.length) process.exit(1)'
+          node -e 'const s=JSON.parse(require("fs").readFileSync("baselined.sarif","utf8")); if (s.runs[0].results.length) process.exit(1)'

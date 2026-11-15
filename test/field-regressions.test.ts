@@ -15,6 +15,15 @@ describe("HTML parsing", () => {
     expect(rulesIn("b.html", `<button><svg><path d="M0"/></svg></button>`)).toContain("button-name");
   });
 
+  it("ends HTML comments where a browser does, so markup after them is still scanned", () => {
+    for (const comment of ["<!-- note --!>", "<!-->", "<!--->", "<!-- a -- b -->", "<!---->"]) {
+      expect(rulesIn("a.html", `<p>${comment}<img src="x.png"></p>`), comment).toContain("img-alt");
+    }
+    // Markup inside a comment is not scanned, and an unterminated comment runs to the end of the file.
+    expect(rulesIn("b.html", `<p><!-- <img src="x.png"> --></p>`)).not.toContain("img-alt");
+    expect(rulesIn("c.html", `<p><!-- <img src="x.png"> --></p><!-- <img src="y.png">`)).not.toContain("img-alt");
+  });
+
   it("treats <textarea> and <title> content as text, not markup", () => {
     const src = `<!doctype html><html lang="en"><head><title>Demo</title></head><body>
 <label>Code <textarea><html><head><title></title></head></html></textarea></label></body></html>`;
@@ -45,6 +54,11 @@ describe("no-div-button", () => {
     expect(rulesIn("D.tsx", `export const D = () => <div onClick={(e) => { e.stopPropagation(); }}>x</div>;`)).toEqual([]);
     // A real handler is still reported.
     expect(rulesIn("E.tsx", `export const D = () => <div onClick={(e) => { e.stopPropagation(); go(); }}>x</div>;`)).toContain("no-div-button");
+    // Parameter names with regex metacharacters (`$`) are matched literally, and must be the object called on.
+    expect(rulesIn("F.tsx", `export const D = () => <div onClick={($) => $.stopPropagation()}>x</div>;`)).toEqual([]);
+    expect(rulesIn("G.tsx", `export const D = () => <div onClick={($e) => $e.stopPropagation()}>x</div>;`)).toEqual([]);
+    expect(rulesIn("H.tsx", `export const D = () => <div onClick={($) => x.stopPropagation()}>x</div>;`)).toContain("no-div-button");
+    expect(rulesIn("I.tsx", `export const D = () => <div onClick={(e) => eX.stopPropagation()}>x</div>;`)).toContain("no-div-button");
   });
 
   it("skips containers whose click comes from an always-rendered native control inside", () => {

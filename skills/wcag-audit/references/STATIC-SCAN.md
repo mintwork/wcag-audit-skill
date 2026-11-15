@@ -10,7 +10,9 @@ npx @mintwork/wcag-audit-skill rules            # what it checks
 ```
 
 Useful flags: `--ignore storybook,fixtures`, `--rules form-label,button-name`,
-`--min-confidence high`. The scanner skips `node_modules`, build output, tests and stories.
+`--min-confidence high`. If the project commits a baseline (`.wcag-audit/baseline.json`), audit
+without `--baseline` so known issues are reviewed too; CI uses it to fail only on new findings.
+The scanner skips `node_modules`, build output, tests and stories.
 
 Read the JSON, not just the summary. Group findings by component: ten `button-name`
 findings in ten pages often trace back to **one** `IconButton` component.
@@ -31,7 +33,7 @@ Most real-world a11y bugs live in shared components the scanner treats as opaque
 
 ```bash
 rg -n "<IconButton(?![^>]*aria-label)(?![^>]*label=)" --pcre2 src
-rg -n "outline:\s*(none|0)" --glob '*.{css,scss,less,tsx,jsx,vue,svelte}' src
+rg -n "outline:\s*(none|0)" --glob '*.{ts,tsx,js,jsx}' src   # CSS-in-JS; stylesheets are scanned
 rg -n "onClick=" src | rg -v "<(button|a|input|select|summary|[A-Z])"
 ```
 
@@ -39,7 +41,7 @@ rg -n "onClick=" src | rg -v "<(button|a|input|select|summary|[A-Z])"
 
 | Pattern | WCAG | What to check |
 | --- | --- | --- |
-| `outline: none` / `outline: 0` / Tailwind `outline-none`, `focus:outline-none` | 2.4.7 | Is there a replacement `:focus-visible` style (`ring`, `box-shadow`, border)? |
+| `outline: none` in CSS-in-JS (styled-components, emotion), or in a stylesheet whose replacement lives in another file | 2.4.7 | The scanner checks `.css` / `.scss` / `.less`, `<style>` and Tailwind classes (`focus-outline-removed`), one stylesheet at a time. Is there a replacement `:focus-visible` style (`ring`, `box-shadow`, border)? |
 | Color-only state (red border = error, green dot = online) | 1.4.1 | Is there text, an icon with a name, or `aria-invalid` + message? |
 | Form errors | 3.3.1, 4.1.3 | Error text linked via `aria-describedby`; `aria-invalid="true"`; announced (`role="alert"` or live region) |
 | Custom select / combobox / menu / tabs | 4.1.2, 2.1.1 | Matches the ARIA APG pattern: roles, `aria-expanded`, arrow keys, Escape |
@@ -71,7 +73,9 @@ rg -n "onClick=" src | rg -v "<(button|a|input|select|summary|[A-Z])"
 - **MDX**: JSX blocks and Markdown headings / links / images are scanned; components used in
   MDX (`<Callout>`, `<Video>`) are opaque, so check their definitions. Fenced code is skipped.
 - **Tailwind**: `sr-only` for hidden labels; `focus-visible:ring-2` as the focus style;
-  check `text-gray-400` on white (fails 4.5:1).
+  `tailwind-contrast` checks `text-*` on `bg-*` only when both are static default-palette
+  classes. Review pairs it skips: `cn()` / `clsx()` classes, theme colors (`text-muted-foreground`),
+  `dark:` variants and opacity.
 
 Record each manual candidate with `source: "static"`, the file and line, and
 `confidence: "medium"` until Phase 3 confirms it.
