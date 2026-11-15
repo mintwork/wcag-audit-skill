@@ -54,6 +54,15 @@ describe("runtime scan (Playwright + axe-core)", () => {
     expect(r.findings.filter((f) => f.ruleId === "focus-visible")).toEqual([]);
   });
 
+  it("passes selectors to the page as data, so ids with quotes, backslashes and code are handled", async (ctx) => {
+    if (!browserOk) ctx.skip();
+    const r = await scanUrl(`${base}/hostile-selectors.html`);
+    const focus = r.findings.filter((f) => f.ruleId === "focus-visible").map((f) => f.location.selector);
+    // The two buttons without a focus indicator are found (each hostile selector resolved in the page),
+    // and the one with a ring is not.
+    expect(focus.sort()).toEqual([`#q\\"uote\\\\back`, `#x\\'\\)\\,window\\.__pwned\\=1\\,\\(\\'`].sort());
+  });
+
   it("reports nothing on the clean page", async (ctx) => {
     if (!browserOk) ctx.skip();
     const r = await scanUrl(`${base}/good.html`);

@@ -155,6 +155,14 @@ describe("false-positive guards", () => {
     expect(run("a.html", `<!-- wcag-audit-ignore-file -->\n<img src="x.png">`)).toEqual([]);
   });
 
+  it("parses suppression ids up to any comment terminator, so a malformed id never silences every rule", () => {
+    // `--!>` also ends an HTML comment; the id before it must still be read as `link-name`.
+    expect(run("a.html", `<!-- wcag-audit-ignore link-name--!>\n<img src="x.png">`)).toEqual(["img-alt"]);
+    expect(run("a.html", `<!-- wcag-audit-ignore link-name-->\n<img src="x.png">`)).toEqual(["img-alt"]);
+    expect(run("a.html", `<!-- wcag-audit-ignore img-alt--!>\n<img src="x.png">`)).toEqual([]);
+    expect(run("a.tsx", `const A = () => <>{/* wcag-audit-ignore link-name*/}\n<img src="x.png" /></>;`)).toEqual(["img-alt"]);
+  });
+
   it("allows decorative images and dialog autofocus", () => {
     expect(run("a.html", `<img src="x.png" alt=""><img src="y.png" role="presentation">`)).toEqual([]);
     expect(run("a.html", `<dialog open><input aria-label="Name" autofocus></dialog>`)).toEqual([]);

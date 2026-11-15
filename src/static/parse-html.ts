@@ -77,8 +77,7 @@ export function parseMarkup(file: string, source: string, framework: Framework):
     }
     if (source.startsWith("<!--", i)) {
       flushText(i);
-      const end = source.indexOf("-->", i + 4);
-      i = end === -1 ? n : end + 3;
+      i = commentEnd(source, i);
       textStart = i;
       continue;
     }
@@ -321,4 +320,19 @@ function decodeEntities(s: string): string {
     }
     return ENTITIES[e.toLowerCase()] ?? m;
   });
+}
+
+/**
+ * Index just past the HTML comment that starts at `start` (`<!--`), following the HTML tokenizer:
+ * `<!-->` and `<!--->` are (abruptly closed) empty comments, and a comment ends at the first `-->`
+ * or `--!>`. An unterminated comment runs to the end of the source.
+ */
+export function commentEnd(source: string, start: number): number {
+  const body = start + 4;
+  if (source.startsWith(">", body)) return body + 1;
+  if (source.startsWith("->", body)) return body + 2;
+  const close = /--!?>/g;
+  close.lastIndex = body;
+  const m = close.exec(source);
+  return m ? m.index + m[0].length : source.length;
 }

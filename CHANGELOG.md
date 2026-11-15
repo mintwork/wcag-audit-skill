@@ -15,6 +15,14 @@ within a minor line.
   are not in it. Matching uses the stable finding ids. A `--json` report also works as a baseline. The JSON
   summary gains `baselined`, and the GitHub Action a `baseline` input.
 
+### Fixed
+
+- The static HTML scanner ends comments where browsers do (`--!>`, `<!-->`, `<!--->`), so markup
+  after such a comment is no longer skipped, and a suppression comment ending in `--!>` no longer
+  silences every rule on the next line.
+- The keyboard audit passes selectors to the page as data (`page.evaluate(fn, selector)`) instead of
+  splicing them into code strings.
+
 ## [0.1.2] - 2026-11-14
 
 ### Changed
