@@ -1,0 +1,40 @@
+// Focus styles that keep a visible indicator (focus-outline-removed must stay quiet).
+.btn {
+  outline: none;
+
+  &:focus-visible {
+    box-shadow: 0 0 0 3px rgb(59 130 246 / 50%);
+  }
+}
+
+// Hide the ring only for mouse focus: the recommended pattern.
+a:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.switch {
+  input {
+    outline: 0;
+  }
+
+  &:focus-within {
+    @include focus-ring;
+  }
+}
+
+.search-input:focus {
+  outline: none; // text entry: the caret shows focus
+}
+
+.card {
+  outline: none; // not focusable
+}
+
+.tab:focus {
+  outline: none;
+  border-bottom-color: currentColor;
+}
+
+@keyframes pulse {
+  from { outline: 0; }
+}

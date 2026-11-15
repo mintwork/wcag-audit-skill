@@ -5,4 +5,7 @@ export { rules } from "./static/rules.js";
 export { formatText, formatJson, formatSarif } from "./report/index.js";
 export { WCAG } from "./wcag.js";
 export * from "./types.js";
+export { fixSource, planFixes, writeFixes, unifiedDiff, FIXABLE_RULES, type FileFix, type FixOptions } from "./fix.js";
+export { createResolver, type ComponentResolver, type ComponentDef } from "./static/resolve.js";
+export { applyBaseline, createBaseline, readBaseline, writeBaseline, DEFAULT_BASELINE, type Baseline, type BaselineEntry } from "./baseline.js";
 export { scanStorybook, storiesFromIndex, filterStories, type Story, type StorybookOptions } from "./runtime/storybook.js";

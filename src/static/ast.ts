@@ -3,7 +3,7 @@
  * sources are all normalized into this shape so rules are written once.
  */
 
-export type Framework = "html" | "vue" | "svelte" | "astro" | "jsx";
+export type Framework = "html" | "vue" | "svelte" | "astro" | "mdx" | "jsx";
 
 export interface Attr {
   /** Normalized, lowercase attribute name (className -> class, @click -> onclick). */
@@ -35,6 +35,8 @@ export interface ElementNode {
   attrs: Map<string, Attr>;
   /** Element has a spread / v-bind="obj" / {...props}: unknown attributes may be present. */
   hasSpread: boolean;
+  /** JSX only: source of each spread argument ("props", "getInputProps()"). */
+  spreads?: string[];
   children: Node[];
   parent: ElementNode | null;
   /** 1-based line / column of the opening tag. */
@@ -64,6 +66,19 @@ export interface ParsedDocument {
   parseErrors: string[];
   /** JSX only: top-level JSX trees of each component defined in this file, by name. */
   components?: Map<string, ElementNode[]>;
+  /** JSX only: imports and exports, used to find a component's definition in another file. */
+  modules?: ModuleInfo;
+}
+
+export interface ModuleInfo {
+  /** Local name → where it comes from ("default", a named export, or "*" for a namespace). */
+  imports: Map<string, { source: string; imported: string }>;
+  /** Exported name ("default" included) → local name. */
+  exports: Map<string, string>;
+  /** export { A as B } from "./x" */
+  reexports: Array<{ exported: string; imported: string; source: string }>;
+  /** export * from "./x" */
+  exportAll: string[];
 }
 
 export function createRoot(): ElementNode {
@@ -113,7 +128,7 @@ export function normalizeAttrName(
   let name = raw;
   let forceDynamic = false;
 
-  if (framework === "jsx") {
+  if (framework === "jsx" || framework === "mdx") {
     if (name === "className") name = "class";
     else if (name === "htmlFor") name = "for";
     return { name: name.toLowerCase(), forceDynamic };

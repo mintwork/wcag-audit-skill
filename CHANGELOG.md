@@ -14,6 +14,66 @@ within a minor line.
   build. It reads `index.json` (7+) or `stories.json` (6.x), skips docs entries, opens each story's iframe in one
   browser and excludes Storybook's own UI from axe. `--stories a,b` limits it to stories whose id or title
   contains a pattern. Finding ids come from the story id (stable across ports); `verify` re-scans the story.
+- **Angular inline templates**: `template:` strings in `@Component({...})` are scanned in `.ts` files, with line
+  and column numbers in the `.ts` source. Other TypeScript files are skipped and not counted.
+- **Multi-state runtime scans** (`scan --config <file>`): a JSON config lists pages and states; each page is
+  scanned in its default state and in every state, all in one browser. States set `colorScheme`, `viewport`,
+  `reducedMotion` and run steps (`click`, `fill`, `press`, `hover`, `check`, `select`, `waitFor`, `wait`) to open a
+  modal or submit an empty form first. Findings carry `location.state`, their ids include the state, and `verify`
+  replays it. `--color-scheme` and `--viewport WxH` set a single state without a config.
+- **Authenticated scans** with a Playwright storage state: `--storage-state <file>` or `"storageState"` in the config.
+- **`--fix` and `--dry-run`** for mechanical findings: `html-lang` (repairs `en_US`, `English`; adds a missing
+  `lang` only with `--lang <code>`), `meta-viewport-zoom` (drops `user-scalable=no` / low `maximum-scale`) and
+  unambiguous `aria-attr-valid` typos. A unified diff is always printed before files are written; `--dry-run`
+  prints it and writes nothing. Exported as `planFixes`, `writeFixes`, `fixSource` and `unifiedDiff`.
+- **Labels resolved across files** (`form-label`): components imported from the project are looked up through
+  relative imports, tsconfig / jsconfig `paths` and workspace packages. A thin wrapper that forwards its props to
+  one `<input>` / `<select>` / `<textarea>` (shadcn's `<Input>`) is checked at each call site, and an imported
+  `<Field>` wrapper whose `<label>` is not associated is reported, both at medium confidence.
+- **Design-system inputs** (`form-label`, medium confidence): MUI `<TextField>` without `label`, antd `<Input>`
+  outside `<Form.Item label>`, Mantine, Chakra, React Aria, HeroUI, React Bootstrap, Fluent UI and Headless UI
+  inputs without their label prop or wrapper.
+- **MDX files** (`.mdx`) are scanned: JSX and HTML elements and `{expressions}`, plus Markdown headings, links
+  and images, so `heading-order`, `link-name`, `link-text-vague` and image rules apply to docs pages.
+  Frontmatter, ESM blocks and fenced code are skipped; line numbers match the source.
+- **CSS analysis** (`focus-outline-removed`, WCAG 2.4.7): the static scan now reads `.css`, `.scss` and `.less`
+  files and `<style>` blocks (HTML, Vue, Svelte, Astro), and reports `outline: none` / `outline: 0` on focus or
+  focusable selectors when no focus style in the same stylesheet replaces it. It also reports Tailwind
+  `outline-none` / `focus:outline-none` on focusable elements without a `focus:` / `focus-visible:` ring,
+  outline, border or shadow class (or a `focus-within:` wrapper, `group-focus` / `peer-focus` indicator). Text
+  fields, `tabindex="-1"`, composite widgets, components and the `:focus:not(:focus-visible)` pattern are skipped.
+- **Five new static rules**, each mapped to WCAG 2.2 and documented in `references/RULES.md`:
+  - `autocomplete-valid` (1.3.5): invalid `autocomplete` values, with the intended token for typos and
+    common aliases (`emial` → `email`, `firstname` → `given-name`, `work name` → `name`).
+  - `label-in-name` (2.5.3): `aria-label` that does not contain the control's visible text.
+  - `table-headers` (1.3.1): data tables without `<th>` / `scope`, and header rows made of `<td>`.
+  - `duplicate-id-ref` (1.3.1, 4.1.2): duplicate ids that a `<label for>` or `aria-*` reference points to.
+  - `tailwind-contrast` (1.4.3, medium confidence): `text-*` on `bg-*` classes below 4.5:1 (3:1 for large
+    text), when both colors are known from Tailwind's default palette (v3 and v4) or arbitrary hex values.
+- **Baseline file**: `scan --write-baseline` records the current findings in `.wcag-audit/baseline.json`
+  (or the `--baseline <file>` path); `scan --baseline <file>` then reports and fails only on findings that
+  are not in it. Matching uses the stable finding ids. A `--json` report also works as a baseline. The JSON
+  summary gains `baselined`, and the GitHub Action a `baseline` input.
+
+### Changed
+
+- Fewer false positives in component-library templates: `no-div-button` and `interactive-role-keyboard` skip
+  elements with Angular attribute directives (`<div ngCombobox>`), `no-div-button` skips click handlers on content
+  inside an element with an interactive role (`<li role="option"><div (click)>`), and `button-name` treats a
+  `label="…"` attribute on `<button>` (`<button pButton label>`) as a name.
+
+### Fixed
+
+- `<Label htmlFor>`, `<FormLabel htmlFor>`, `<FieldLabel htmlFor>` (shadcn, Radix, design systems) now associate a
+  label like `<label for>`; `antd` `<Form.Item>`, `<FormControl>`, `<FormGroup>` and `<Input.Wrapper>` count as
+  label wrappers, so controls inside them are no longer reported.
+- Suppression comments with a reason (`wcag-audit-ignore img-alt: tracking pixel`), the documented form, now
+  suppress the finding. The colon and the words of the reason were read as rule ids, so nothing was suppressed.
+- The static HTML scanner ends comments where browsers do (`--!>`, `<!-->`, `<!--->`), so markup
+  after such a comment is no longer skipped, and a suppression comment ending in `--!>` no longer
+  silences every rule on the next line.
+- The keyboard audit passes selectors to the page as data (`page.evaluate(fn, selector)`) instead of
+  splicing them into code strings.
 
 ## [0.1.2] - 2026-11-14
 

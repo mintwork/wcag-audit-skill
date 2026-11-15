@@ -86,7 +86,7 @@ The skill ([`skills/wcag-audit/SKILL.md`](skills/wcag-audit/SKILL.md)) gives the
 
 | Phase | What happens | Output |
 | --- | --- | --- |
-| **1. Static scan** | CLI parses HTML, JSX/TSX, Vue, Svelte, Astro and checks 24 rules. The agent then reviews what tools miss: shared components, `outline: none`, color-only state. | `.wcag-audit/static.json` |
+| **1. Static scan** | CLI parses HTML, JSX/TSX, Vue, Svelte, Astro, MDX and CSS and checks 30 rules. The agent then reviews what tools miss: shared components, focus styles in CSS-in-JS, color-only state. | `.wcag-audit/static.json` |
 | **2. Runtime scan** | Starts your dev server, opens pages in real Chromium, runs **axe-core**, and **tabs through the page** to catch keyboard traps and invisible focus. | `.wcag-audit/runtime.json` |
 | **3. Verification** | Each candidate is re-checked to *disprove* it: trace props and spreads, check the rendered DOM. Verdict: `confirmed`, `needs_validation`, or `rejected`. Runtime violations are re-run automatically and dropped if they don't reproduce. | verdicts |
 | **4. Fix** | Minimal, native-HTML-first fixes in your framework's idiom, each explained (what was wrong, who it affected, what changed). Visual/copy changes need your OK. Never invents alt text. | diffs + `verify` |
@@ -95,7 +95,7 @@ The skill ([`skills/wcag-audit/SKILL.md`](skills/wcag-audit/SKILL.md)) gives the
 ## CLI
 
 ```bash
-npx @mintwork/wcag-audit-skill scan ./src                        # static: HTML / JSX / TSX / Vue / Svelte / Astro
+npx @mintwork/wcag-audit-skill scan ./src                        # static: HTML / JSX / TSX / Vue / Svelte / Astro / MDX / CSS
 npx @mintwork/wcag-audit-skill scan http://localhost:3000        # runtime: axe-core + keyboard checks in Chromium
 npx @mintwork/wcag-audit-skill scan ./dist/index.html --runtime  # open a local file in the browser
 npx @mintwork/wcag-audit-skill scan ./src --json -o a11y.json    # machine-readable
@@ -109,14 +109,43 @@ npx @mintwork/wcag-audit-skill rules                             # list rules + 
 | `--fail-on <sev>` | exit 1 at `critical`/`serious`/`moderate`/`minor` (default `minor`) or `none` |
 | `--min-confidence <c>` | drop findings below `high`/`medium` |
 | `--rules a,b` / `--ignore dir,dir` | select rules / skip directories |
+| `--fix` / `--dry-run` | fix mechanical findings in place, always printing the diff first; `--dry-run` only prints it (see [Fixing](#fixing-mechanical-findings)) |
+| `--lang <code>` | with `--fix`: add `lang="<code>"` to `<html>` that has none |
+| `--baseline <file>` | report and fail only on findings not in the baseline (see [Baseline](#baseline-fail-only-on-new-findings)) |
+| `--write-baseline` | record the current findings in the `--baseline` file (default `.wcag-audit/baseline.json`) and exit 0 |
 | `--level A\|AA\|AAA` | runtime WCAG level (default `AA`) |
 | `--best-practice` | add axe best-practice rules |
 | `--wait-for <selector>` | SPA readiness |
+| `--config <file>` | scan pages × states from a JSON config (see [Runtime states](#runtime-states)) |
+| `--storage-state <file>` | Playwright storage state (cookies, localStorage) for authenticated pages |
+| `--color-scheme dark\|light` / `--viewport 320x640` | one-off state without a config |
 | `--storybook <url\|dir>` / `--stories a,b` | scan every story of a running Storybook or a static build (`storybook-static/`); `--stories` filters by id / title |
 | `--no-keyboard` / `--no-verify` | skip Tab traversal / skip the verification re-run |
 | `--browser chrome\|msedge` | browser channel (auto-detects Playwright Chromium, Chrome, Edge) |
 
 Exit codes: `0` clean, `1` findings at or above `--fail-on`, `2` usage or runtime error.
+
+### Runtime states
+
+A page's first paint is a fraction of its UI. List pages and states in a JSON config and every page is scanned in its default state plus each state: open a modal by clicking a selector, submit an empty form, dark mode, 320px ([full example](examples/wcag-audit.config.json)):
+
+```json
+{
+  "baseUrl": "http://localhost:3000",
+  "storageState": ".auth/user.json",
+  "states": [{ "name": "dark", "colorScheme": "dark" }, { "name": "320px", "viewport": { "width": 320, "height": 640 } }],
+  "pages": ["/", { "url": "/settings", "states": [
+    { "name": "dialog open", "steps": [{ "click": "#open-settings" }, { "waitFor": "[role=dialog]" }] },
+    { "name": "empty submit", "steps": [{ "click": "form button[type=submit]" }] }
+  ] }]
+}
+```
+
+```bash
+npx @mintwork/wcag-audit-skill scan --config wcag-audit.config.json
+```
+
+Steps: `click`, `fill` (+ `value`), `press` (+ optional `selector`), `hover`, `check`, `select` (+ `value`), `waitFor`, `wait` (ms). States also take `colorScheme`, `viewport` and `reducedMotion`. All states run in one browser; findings carry `location.state`, ids include the state, and `verify` replays it. **Authenticated pages:** record a [storage state](https://playwright.dev/docs/auth) once (`npx playwright codegen --save-storage=.auth/user.json <login-url>`) and pass `--storage-state .auth/user.json` (or `"storageState"` in the config, relative to it). Keep it out of git.
 
 **Storybook:** `scan --storybook http://localhost:6006` (or `--storybook storybook-static`) reads the story index (`index.json`, or `stories.json` for 6.x), opens every story's `iframe.html?id=…` in one browser and runs the runtime scan on each, skipping docs pages and Storybook's own UI. Finding ids come from the story id, so they stay stable across runs and ports, and `verify` re-scans the story.
 
@@ -144,9 +173,29 @@ Exit codes: `0` clean, `1` findings at or above `--fail-on`, `2` usage or runtim
 
 Runtime findings carry `location.url` + `location.selector` and `"verified": true`. IDs are stable fingerprints (rule + file + element), so they survive line moves and power `verify`.
 
+### Fixing mechanical findings
+
+```bash
+npx @mintwork/wcag-audit-skill scan src --dry-run            # print the diff, write nothing
+npx @mintwork/wcag-audit-skill scan src --fix --lang en      # print the diff, apply it, report what is left
+```
+
+`--fix` handles the findings with exactly one correct answer: `html-lang` (`lang="en_US"` → `en-US`, `"English"` → `en`; a missing `lang` only with `--lang`, never guessed), `meta-viewport-zoom` (drops `user-scalable=no` and `maximum-scale` below 2, keeps the rest) and `aria-attr-valid` typos (`aria-lable` → `aria-label`, only when one attribute is the obvious match and it isn't already set). The diff is always printed before anything is written (to stderr when stdout carries `--json` / `--sarif`), files keep their line count, and suppressed findings are left alone. Everything else needs judgment: that's the agent's Phase 4.
+
+### Baseline: fail only on new findings
+
+Adopting the scanner on an existing codebase? Record today's findings once, commit the file, and CI fails only on findings that are not in it:
+
+```bash
+npx @mintwork/wcag-audit-skill scan src --write-baseline                         # writes .wcag-audit/baseline.json
+npx @mintwork/wcag-audit-skill scan src --baseline .wcag-audit/baseline.json     # reports new findings only
+```
+
+Matching uses the finding `id` (rule + file + opening tag), so moved lines stay known, while a renamed file or an edited opening tag counts as new. Run both commands from the same directory (paths in ids are relative to it). Entries that no longer match are reported on stderr; re-run `--write-baseline` to prune them. A `--json` report also works as a baseline. If `.wcag-audit/` is git-ignored, keep the baseline with `!.wcag-audit/baseline.json`.
+
 ### False positives, kept low on purpose
 
-Static rules skip anything they can't know: spread props (`{...props}`, `v-bind="obj"`), bound values (`alt={t('logo')}`, `:alt`), and components that may render text. Heuristic findings are marked `confidence: "medium"` — for example `<IconButton><CloseIcon /></IconButton>` with no `aria-label`, or a control inside a same-file `<Field>` wrapper whose `<label>` isn't associated. Icons imported from icon libraries (lucide, `@mui/icons-material`, react-icons, …) are recognized as icons. Suppress a reviewed finding with a reason:
+Static rules skip anything they can't know: spread props (`{...props}`, `v-bind="obj"`), bound values (`alt={t('logo')}`, `:alt`), and components that may render text. Heuristic findings are marked `confidence: "medium"` — for example `<IconButton><CloseIcon /></IconButton>` with no `aria-label`, or a control inside a `<Field>` wrapper whose `<label>` isn't associated. Components imported from other files of the project are resolved (relative imports, tsconfig `paths` such as `@/components/…`, workspace packages): a thin `<Input {...props} />` wrapper is checked like `<input>` at each call site, and design-system inputs (MUI `<TextField>`, antd `<Input>`, Mantine, Chakra, React Aria, HeroUI, React Bootstrap, Fluent, Headless UI) are checked for their label prop or wrapper (`<Form.Item label>`, `<FormControl>`). Icons imported from icon libraries (lucide, `@mui/icons-material`, react-icons, …) are recognized as icons. Suppress a reviewed finding with a reason:
 
 ```html
 <!-- wcag-audit-ignore img-alt: tracking pixel, hidden from AT -->
@@ -182,7 +231,7 @@ Findings appear as PR annotations and under **Security → Code scanning**. Or u
           fail-on: serious
 ```
 
-Inputs: `targets`, `fail-on`, `sarif-file`, `upload-sarif`, `args`, `version` (empty = the action's own ref; set an npm version to run the published package). A runtime job (start app → scan URLs) is in [`examples/github-action.yml`](examples/github-action.yml); the action itself is [`action.yml`](action.yml).
+Inputs: `targets`, `fail-on`, `sarif-file`, `upload-sarif`, `baseline` (path to a committed baseline file: only new findings are reported and fail the step), `args`, `version` (empty = the action's own ref; set an npm version to run the published package). A runtime job (start app → scan URLs) is in [`examples/github-action.yml`](examples/github-action.yml); the action itself is [`action.yml`](action.yml).
 
 ## Rules
 
@@ -194,7 +243,7 @@ Inputs: `targets`, `fail-on`, `sarif-file`, `upload-sarif`, `args`, `version` (e
 | `img-alt-meaningful` | 1.1.1 | minor | `alt="image.png"`, `alt="photo"` |
 | `input-image-alt` | 1.1.1, 4.1.2 | critical | `<input type="image">` without `alt` |
 | `svg-img-name` | 1.1.1 | serious | `<svg role="img">` without a name |
-| `form-label` | 1.3.1, 3.3.2, 4.1.2 | critical | inputs/selects/textareas without a label (placeholder ≠ label) |
+| `form-label` | 1.3.1, 3.3.2, 4.1.2 | critical | inputs/selects/textareas without a label (placeholder ≠ label), including thin `<Input>` wrappers and design-system inputs (`<TextField>` without `label`) |
 | `button-name` | 4.1.2 | critical | empty and icon-only buttons |
 | `link-name` | 2.4.4, 4.1.2 | serious | empty and icon-only links |
 | `link-text-vague` | 2.4.4 | minor | "click here", "read more" |
@@ -206,6 +255,7 @@ Inputs: `targets`, `fail-on`, `sarif-file`, `upload-sarif`, `args`, `version` (e
 | `html-lang` | 3.1.1 | serious | missing / invalid `<html lang>` |
 | `document-title` | 2.4.2 | serious | missing / empty `<title>` |
 | `no-positive-tabindex` | 2.4.3 | serious | `tabindex="3"` |
+| `focus-outline-removed` | 2.4.7 | serious | `outline: none` / `outline: 0` in `.css` / `.scss` / `.less` / `<style>`, or Tailwind `outline-none` / `focus:outline-none` on a focusable element, with no `:focus-visible` / `focus:ring` replacement |
 | `iframe-title` | 4.1.2 | serious | untitled iframes |
 | `aria-hidden-focusable` | 4.1.2 | serious | focusable content inside `aria-hidden` |
 | `aria-role-valid` | 4.1.2 | serious | `role="buton"` (suggests `button`) |
@@ -214,6 +264,11 @@ Inputs: `targets`, `fail-on`, `sarif-file`, `upload-sarif`, `args`, `version` (e
 | `video-captions` | 1.2.2 | serious | `<video>` without captions track |
 | `no-distracting-elements` | 2.2.2 | serious | `<marquee>`, `<blink>` |
 | `no-autofocus` | 2.4.3, 3.2.1 | minor | `autofocus` outside dialogs |
+| `autocomplete-valid` | 1.3.5 | serious | `autocomplete="emial"`, `"firstname"`, `"work name"` (suggests the token) |
+| `label-in-name` | 2.5.3 | serious | `aria-label="Open navigation"` on a button that reads "Menu" |
+| `table-headers` | 1.3.1 | serious | data tables without `<th>` / `scope`, header rows made of `<td>` |
+| `duplicate-id-ref` | 1.3.1, 4.1.2 | serious | duplicate `id` that a `<label for>` or `aria-*` reference points to |
+| `tailwind-contrast` | 1.4.3 | serious | `text-gray-400` on `bg-white` and other default-palette pairs below 4.5:1 (3:1 large); medium confidence |
 
 ### Runtime (browser)
 
@@ -248,19 +303,20 @@ Measured on 10 real codebases (React/Next, Vue, SvelteKit, Astro, plain-HTML ext
 | `focus-visible` | pixel-verified: 4 medium-confidence findings, all real (the style-only check had reported 64, 4 of them real) |
 | `keyboard-trap` | 0 findings on 7 real pages (no false alarms) |
 
-Known gaps: `.mdx` files are not scanned; labels and names that come from component props in another file are invisible to the static scan (the runtime scan sees them).
+Known gaps: form labels are followed into imported project components, but other names and labels that come from component props in another file (a button's `label` prop, an icon's `title`) are invisible to the static scan (the runtime scan sees them).
 
 ## Roadmap
 
-- [ ] MDX files, and resolving labels across files (imported `<Field>`, MUI `<TextField label>`)
-- [ ] Rules: `autocomplete-valid` (1.3.5), `label-in-name` (2.5.3), table headers, duplicate ids, Tailwind contrast from class names
-- [ ] CSS analysis: `outline: none` without `:focus-visible` replacement (2.4.7) in source
-- [ ] Angular template files (`.component.html` works today; inline `template:` strings next)
-- [ ] Multi-state runtime scans from a config file (open modal, submit empty form, dark mode, 320px)
-- [ ] Authenticated scans via Playwright storage state
+- [x] MDX files (JSX and HTML blocks, plus Markdown headings, links and images; code blocks are skipped)
+- [x] Resolving labels across files: imported `<Field>` wrappers, thin `<Input>` components, MUI `<TextField label>` and other design-system inputs
+- [x] Rules: `autocomplete-valid` (1.3.5), `label-in-name` (2.5.3), `table-headers`, `duplicate-id-ref`, `tailwind-contrast` (Tailwind contrast from class names)
+- [x] CSS analysis: `outline: none` without `:focus-visible` replacement (2.4.7) in `.css` / `.scss` / `.less`, `<style>` blocks and Tailwind classes (`focus-outline-removed`)
+- [x] Angular templates: `.component.html` files and inline `template:` strings in `@Component` (`.ts`)
+- [x] Multi-state runtime scans from a config file (open modal, submit empty form, dark mode, 320px): `--config`
+- [x] Authenticated scans via Playwright storage state: `--storage-state`
 - [ ] Map runtime selectors back to source files automatically (React DevTools / source maps)
-- [ ] `--fix` for mechanical rules (`html-lang`, `meta-viewport-zoom`, `aria-attr-valid` typos)
-- [ ] Baseline file to fail CI only on new findings
+- [x] `--fix` / `--dry-run` for mechanical rules (`html-lang`, `meta-viewport-zoom`, `aria-attr-valid` typos)
+- [x] Baseline file to fail CI only on new findings (`--baseline`, `--write-baseline`, action input `baseline`)
 - [x] Storybook integration: scan every story (`--storybook <url|dir>`)
 
 Have an idea or a false positive? [Open an issue](CONTRIBUTING.md) with a minimal snippet.

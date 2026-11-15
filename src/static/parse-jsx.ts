@@ -1,5 +1,5 @@
 import { parse } from "@babel/parser";
-import { type Attr, type ElementNode, type Node, type ParsedDocument, createRoot, normalizeAttrName } from "./ast.js";
+import { type Attr, type ElementNode, type ModuleInfo, type Node, type ParsedDocument, createRoot, normalizeAttrName } from "./ast.js";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type AnyNode = any;
@@ -95,9 +95,11 @@ export function parseJsx(file: string, source: string): ParsedDocument {
     const alias = COMPONENT_ALIASES[rawTag];
     const attrs = new Map<string, Attr>();
     let hasSpread = false;
+    const spreads: string[] = [];
     for (const a of opening.attributes) {
       if (a.type === "JSXSpreadAttribute") {
         hasSpread = true;
+        spreads.push(source.slice(a.argument.start, a.argument.end));
         continue;
       }
       const rawName = jsxName(a.name);
@@ -117,6 +119,7 @@ export function parseJsx(file: string, source: string): ParsedDocument {
       scope,
       attrs,
       hasSpread,
+      spreads: spreads.length ? spreads : undefined,
       children: [],
       parent,
       line: opening.loc.start.line,
@@ -177,7 +180,37 @@ export function parseJsx(file: string, source: string): ParsedDocument {
   };
 
   visit(ast.program, root);
-  return { file, framework: "jsx", source, root, parseErrors: errors, components };
+  return { file, framework: "jsx", source, root, parseErrors: errors, components, modules: moduleInfo(ast.program.body ?? []) };
+}
+
+function moduleInfo(body: AnyNode[]): ModuleInfo {
+  const info: ModuleInfo = { imports: new Map(), exports: new Map(), reexports: [], exportAll: [] };
+  const name = (n: AnyNode): string => (n?.type === "StringLiteral" ? n.value : n?.name);
+  for (const stmt of body) {
+    const source = stmt.source?.value as string | undefined;
+    if (stmt.type === "ImportDeclaration" && source) {
+      for (const spec of stmt.specifiers ?? []) {
+        const imported = spec.type === "ImportDefaultSpecifier" ? "default" : spec.type === "ImportNamespaceSpecifier" ? "*" : name(spec.imported);
+        info.imports.set(spec.local.name, { source, imported });
+      }
+    } else if (stmt.type === "ExportNamedDeclaration") {
+      const d = stmt.declaration;
+      if (d?.id?.name) info.exports.set(d.id.name, d.id.name);
+      for (const decl of d?.declarations ?? []) if (decl.id?.type === "Identifier") info.exports.set(decl.id.name, decl.id.name);
+      for (const spec of stmt.specifiers ?? []) {
+        const exported = name(spec.exported);
+        if (source) info.reexports.push({ exported, imported: spec.type === "ExportNamespaceSpecifier" ? "*" : name(spec.local), source });
+        else info.exports.set(exported, name(spec.local));
+      }
+    } else if (stmt.type === "ExportDefaultDeclaration") {
+      const d = stmt.declaration;
+      const local = d?.id?.name ?? (d?.type === "Identifier" ? d.name : undefined);
+      if (local) info.exports.set("default", local);
+    } else if (stmt.type === "ExportAllDeclaration" && source && !stmt.exported) {
+      info.exportAll.push(source);
+    }
+  }
+  return info;
 }
 
 function jsxName(n: AnyNode): string {
