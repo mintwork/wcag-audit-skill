@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFile, writeFile } from "node:fs/promises";
+import { DEFAULT_BASELINE, applyBaseline, readBaseline, writeBaseline } from "./baseline.js";
 import { FIXABLE_RULES, planFixes, unifiedDiff, writeFixes } from "./fix.js";
 import { parseArgs } from "node:util";
 import { counts, formatJson, formatSarif, formatText, where } from "./report/index.js";
@@ -31,6 +32,10 @@ Filtering & CI
   --min-confidence <c>   drop findings below high|medium|low (default: low)
   --rules <ids>          comma-separated static rule ids to run
   --ignore <names>       comma-separated directory/file names to skip
+  --baseline <file>      report (and fail on) only findings that are not in this baseline file,
+                         e.g. ${DEFAULT_BASELINE}; a --json report also works as a baseline
+  --write-baseline       record all current findings in the --baseline file (default
+                         ${DEFAULT_BASELINE}) and exit 0
 
 Fixing (static targets)
   --fix                  fix mechanical findings in place: html-lang (repair "en_US", "English"),
@@ -65,6 +70,8 @@ async function main(argv: string[]): Promise<number> {
       "min-confidence": { type: "string" },
       rules: { type: "string" },
       ignore: { type: "string" },
+      baseline: { type: "string" },
+      "write-baseline": { type: "boolean" },
       level: { type: "string" },
       "best-practice": { type: "boolean" },
       "no-keyboard": { type: "boolean" },
@@ -146,6 +153,10 @@ async function main(argv: string[]): Promise<number> {
   if (command !== "scan") return usage(`Unknown command "${command}"`);
   if (!targets.length) return usage("scan needs at least one <path|url>");
 
+  const baselineFile = values.baseline || DEFAULT_BASELINE;
+  // Read the baseline before scanning, so a missing file fails fast.
+  const known = values.baseline !== undefined && !values["write-baseline"] ? await readBaseline(baselineFile) : undefined;
+
   let results: ScanResult[] = [];
   for (const t of targets) results.push(await scan(t, opts));
 
@@ -168,6 +179,16 @@ async function main(argv: string[]): Promise<number> {
       // Report what is left.
       if (changedFiles) results = await Promise.all(targets.map((t) => scan(t, opts)));
     }
+  }
+
+  if (values["write-baseline"]) {
+    const b = await writeBaseline(baselineFile, results);
+    console.error(`${TOOL.name}: wrote ${baselineFile} (${b.findings.length} known finding${b.findings.length === 1 ? "" : "s"}). Commit it and scan with --baseline ${baselineFile}.`);
+    return 0;
+  }
+  if (known) {
+    const b = applyBaseline(results, known);
+    if (b.stale) console.error(`${TOOL.name}: ${b.stale} baseline entr${b.stale === 1 ? "y" : "ies"} no longer found (fixed or moved); run with --write-baseline to prune.`);
   }
 
   const out = values.sarif ? formatSarif(results) : values.json ? formatJson(results) : formatText(results);

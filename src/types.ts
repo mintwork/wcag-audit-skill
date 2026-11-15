@@ -56,4 +56,6 @@ export interface ScanResult {
   findings: Finding[];
   /** Findings dropped during verification (not reproducible). */
   discarded: number;
+  /** Findings hidden because they are in the --baseline file. */
+  baselined?: number;
 }
