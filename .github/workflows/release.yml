@@ -1,11 +1,12 @@
 name: Release
 
 # Publishing a GitHub Release (tag vX.Y.Z) publishes that version to npm with provenance.
-# Auth: npm trusted publishing (OIDC) once configured on npmjs.com, otherwise the NPM_TOKEN secret.
+# Auth: npm trusted publishing (OIDC). No npm token is stored anywhere: npm trusts this workflow
+# file in this repository (configured per package on npmjs.com → Settings → Trusted Publisher).
 on:
   release:
     types: [published]
-  # Manual runs only check npm auth and pack the package; they never publish.
+  # Manual runs build and pack the package (npm pack --dry-run); they never publish.
   workflow_dispatch:
 
 permissions:
@@ -26,7 +27,7 @@ jobs:
           node-version: 26
           registry-url: https://registry.npmjs.org
           cache: npm
-      # Trusted publishing needs npm >= 11.5.1.
+      # Trusted publishing needs npm >= 11.5.1 (Node 26 ships a recent npm; this pins the floor).
       - run: npm install -g npm@^11.5.1
       - run: npm ci
       - run: npm run typecheck && npm test
@@ -41,19 +42,28 @@ jobs:
           fi
 
       - name: Publish to npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           name="$(node -p "require('./package.json').name")"
           version="$(node -p "require('./package.json').version")"
           if [ "$GITHUB_EVENT_NAME" != "release" ]; then
-            echo "Dry run: npm user is $(npm whoami)"
-            npm publish --provenance --access public --dry-run
+            echo "Dry run: would publish $name@$version via trusted publishing (OIDC)"
+            npm pack --dry-run
           elif npm view "$name@$version" version >/dev/null 2>&1; then
             echo "$name@$version is already on npm, skipping publish"
           else
-            npm publish --provenance --access public
+            # With OIDC trusted publishing, npm signs provenance automatically.
+            npm publish --access public
           fi
+
+      # Agensi (agensi.io) has no CI publishing API, so the release carries a ready-to-upload
+      # package: upload it in Creator Studio, or ask an agent connected to Agensi to update_skill.
+      - name: Build Agensi package
+        run: npm run -s build:agensi
+      - name: Attach Agensi package to the release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" dist-agensi/*.zip --clobber
 
       # The GitHub Action is consumed as @v0; keep that tag on the latest release.
       - name: Move v0 tag to this release

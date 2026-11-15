@@ -12,7 +12,7 @@ and Cursor, plus a CLI.
 
 Static scan → real browser → verify → fix → report.
 
-github.com/ranjan-mohanty/wcag-audit-skill
+github.com/mintwork/wcag-audit-skill
 
 [demo.gif]
 
@@ -55,12 +55,12 @@ conformance, and every report lists what still needs a human (screen reader, zoo
 Try it:
 
 Claude Code:
-/plugin marketplace add ranjan-mohanty/wcag-audit-skill
+/plugin marketplace add mintwork/wcag-audit-skill
 
 CLI:
-npx wcag-audit-skill scan ./src
+npx @mintwork/wcag-audit-skill scan ./src
 
 CI:
-uses: ranjan-mohanty/wcag-audit-skill@v0
+uses: mintwork/wcag-audit-skill@v0
 
 MIT. False-positive reports welcome.

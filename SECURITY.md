@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please report security issues privately through
-[GitHub's private vulnerability reporting](https://github.com/ranjan-mohanty/wcag-audit-skill/security/advisories/new),
+[GitHub's private vulnerability reporting](https://github.com/mintwork/wcag-audit-skill/security/advisories/new),
 not in public issues. You should get a reply within a few days.
 
 ## Supported versions

@@ -2,7 +2,7 @@
 
 Drafts for the v0.1.0 launch. Before posting:
 
-- The repository must be public, and `npx wcag-audit-skill` only works after `npm publish`.
+- The repository must be public, and `npx @mintwork/wcag-audit-skill` only works after `npm publish`.
 - Attach `docs/demo.gif` (X and Reddit accept GIFs; HN is text-only, so link the README).
 - All numbers come from the README "Field-tested" table. Do not name the codebases or pages
   that were measured.

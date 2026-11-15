@@ -21,7 +21,7 @@ jobs:
         with:
           node-version: lts/*
       - name: Scan source
-        run: npx --yes wcag-audit-skill scan src --sarif -o wcag-audit.sarif --fail-on serious
+        run: npx --yes @mintwork/wcag-audit-skill scan src --sarif -o wcag-audit.sarif --fail-on serious
       - name: Upload to code scanning
         if: always()
         uses: github/codeql-action/upload-sarif@v4
@@ -47,7 +47,7 @@ jobs:
       # ubuntu-latest ships Google Chrome, which wcag-audit-skill auto-detects.
       - name: Scan pages in a real browser
         run: >
-          npx --yes wcag-audit-skill scan
+          npx --yes @mintwork/wcag-audit-skill scan
           http://localhost:3000/
           http://localhost:3000/login
           --json -o wcag-runtime.json --fail-on serious
@@ -59,7 +59,7 @@ jobs:
 
 # Or use the bundled composite action:
 #
-#      - uses: ranjan-mohanty/wcag-audit-skill@v0
+#      - uses: mintwork/wcag-audit-skill@v0
 #        with:
 #          targets: src
 #          fail-on: serious

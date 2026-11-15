@@ -10,14 +10,14 @@ Accessibility failures are bugs that block real people. Follow these phases when
 and the "Fix" rules whenever you write UI.
 
 ## 1. Static scan
-Run `npx wcag-audit-skill scan <path> --json --fail-on none` in the terminal. Group findings
+Run `npx @mintwork/wcag-audit-skill scan <path> --json --fail-on none` in the terminal. Group findings
 by component — many call-site findings usually share one root-cause component. Also review
 manually: shared primitives (Button/IconButton/Input/Modal) forward aria-* and id; no
 `outline: none` / `focus:outline-none` without a `:focus-visible` replacement; state is not
 conveyed by color alone; errors are tied to fields with `aria-describedby`.
 
 ## 2. Runtime scan
-If a dev server is running, run `npx wcag-audit-skill scan http://localhost:<port>/<page> --json --fail-on none`.
+If a dev server is running, run `npx @mintwork/wcag-audit-skill scan http://localhost:<port>/<page> --json --fail-on none`.
 It uses axe-core in a real browser plus Tab-key checks for keyboard traps and invisible focus.
 
 ## 3. Verify every finding
@@ -37,6 +37,6 @@ Confirmed → fix. Unclear (alt text meaning, unreachable state) → ask the use
 Explain each fix in one sentence: what was wrong, who it affected, what changed.
 
 ## 5. Re-check and report
-Save the scan with `--json -o /tmp/a11y.json`, then `npx wcag-audit-skill verify /tmp/a11y.json`
+Save the scan with `--json -o /tmp/a11y.json`, then `npx @mintwork/wcag-audit-skill verify /tmp/a11y.json`
 after fixing (non-zero exit = remaining or new issues). Report counts by severity, fixes, open
 questions, and what automation can't check (screen reader pass, zoom/reflow, captions).

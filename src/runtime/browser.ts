@@ -10,7 +10,7 @@ export interface LaunchOptions {
 /**
  * Launch Chromium. Tries, in order: an explicit executable / channel, the
  * Playwright-managed Chromium, then locally installed Chrome and Edge. This
- * means `npx wcag-audit-skill scan https://…` works on most dev machines
+ * means `npx @mintwork/wcag-audit-skill scan https://…` works on most dev machines
  * without a separate `playwright install` step.
  */
 export async function launchBrowser(opts: LaunchOptions = {}): Promise<Browser> {

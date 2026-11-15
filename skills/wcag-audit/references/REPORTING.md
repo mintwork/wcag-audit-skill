@@ -93,5 +93,5 @@ Suggest wiring the CLI into CI so regressions are caught (see the project README
 GitHub Action, which uploads SARIF to code scanning):
 
 ```bash
-npx wcag-audit-skill scan src --sarif -o wcag.sarif --fail-on serious
+npx @mintwork/wcag-audit-skill scan src --sarif -o wcag.sarif --fail-on serious
 ```

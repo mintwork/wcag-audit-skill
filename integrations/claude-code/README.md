@@ -5,20 +5,20 @@ Three ways to install, pick one.
 **Plugin marketplace (recommended)** — inside Claude Code:
 
 ```
-/plugin marketplace add ranjan-mohanty/wcag-audit-skill
+/plugin marketplace add mintwork/wcag-audit-skill
 /plugin install wcag-audit@wcag-audit-skill
 ```
 
 **Skills CLI**
 
 ```bash
-npx skills add https://github.com/ranjan-mohanty/wcag-audit-skill --skill wcag-audit
+npx skills add https://github.com/mintwork/wcag-audit-skill --skill wcag-audit
 ```
 
 **Manual copy**
 
 ```bash
-git clone https://github.com/ranjan-mohanty/wcag-audit-skill
+git clone https://github.com/mintwork/wcag-audit-skill
 mkdir -p ~/.claude/skills && cp -r wcag-audit-skill/skills/wcag-audit ~/.claude/skills/
 # or per project:  cp -r wcag-audit-skill/skills/wcag-audit .claude/skills/
 ```

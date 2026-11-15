@@ -4,7 +4,7 @@
 
 Show HN: An accessibility audit skill for coding agents (WCAG 2.2, verified findings)
 
-**URL:** https://github.com/ranjan-mohanty/wcag-audit-skill
+**URL:** https://github.com/mintwork/wcag-audit-skill
 
 **Text:**
 

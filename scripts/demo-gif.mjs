@@ -112,7 +112,7 @@ function revealFast(out, { chunk = 5, ms = 40 } = {}) {
 
 // Scene 1: a single React component, each finding with WCAG criterion and fix.
 caption = "1/3 · scan a React component";
-const cmd1 = "npx wcag-audit-skill scan bad/ProductCard.tsx";
+const cmd1 = "npx @mintwork/wcag-audit-skill scan bad/ProductCard.tsx";
 const out1 = cli(["scan", "bad/ProductCard.tsx"]);
 type(cmd1);
 const summary1 = out1.length - 2;
@@ -122,7 +122,7 @@ revealBlocks(out1.slice(summary1), 1800);
 // Scene 2: a whole folder of HTML, React, Vue and Svelte.
 caption = "2/3 · HTML, React, Vue, Svelte in one pass";
 lines.push(ansiToHtml(""));
-type("npx wcag-audit-skill scan bad/");
+type("npx @mintwork/wcag-audit-skill scan bad/");
 const out2 = cli(["scan", "bad/"]);
 revealFast(out2.slice(0, -2), { chunk: 14, ms: 60 });
 revealBlocks(out2.slice(-2), 2200);
@@ -130,7 +130,7 @@ revealBlocks(out2.slice(-2), 2200);
 // Scene 3: after the fixes, the same component is clean.
 caption = "3/3 · after the agent's fixes";
 lines.push(ansiToHtml(""));
-const cmd3 = "npx wcag-audit-skill scan good/ProductCard.tsx";
+const cmd3 = "npx @mintwork/wcag-audit-skill scan good/ProductCard.tsx";
 type(cmd3);
 const out3 = cli(["scan", "good/ProductCard.tsx"]);
 revealBlocks(out3, 400);

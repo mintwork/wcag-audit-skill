@@ -27,17 +27,17 @@ accessibility and fix it". Claude then runs a phased procedure:
 Install:
 
 ```
-/plugin marketplace add ranjan-mohanty/wcag-audit-skill
+/plugin marketplace add mintwork/wcag-audit-skill
 /plugin install wcag-audit@wcag-audit-skill
 ```
 
-It also works in Codex (AGENTS.md), Cursor, or as `npx wcag-audit-skill scan ./src`.
+It also works in Codex (AGENTS.md), Cursor, or as `npx @mintwork/wcag-audit-skill scan ./src`.
 
 Tested on 10 real codebases (6,880 files) and 7 live pages with hand-checked findings: 91%
 true positives on the latest sample, 0 false positives. It can't replace a screen-reader
 test, and the report says so.
 
-Repo: https://github.com/ranjan-mohanty/wcag-audit-skill. Feedback on the skill
+Repo: https://github.com/mintwork/wcag-audit-skill. Feedback on the skill
 instructions is very welcome.
 
 ---
@@ -52,9 +52,9 @@ I wanted one accessibility check that works across the frameworks I touch, gives
 tells me which WCAG criterion failed and how to fix it, and plugs into GitHub code scanning.
 
 ```
-npx wcag-audit-skill scan ./src                 # static: HTML / JSX / TSX / Vue / Svelte / Astro
-npx wcag-audit-skill scan http://localhost:3000 # runtime: axe-core + keyboard checks in Chrome
-npx wcag-audit-skill scan ./src --sarif -o a11y.sarif
+npx @mintwork/wcag-audit-skill scan ./src                 # static: HTML / JSX / TSX / Vue / Svelte / Astro
+npx @mintwork/wcag-audit-skill scan http://localhost:3000 # runtime: axe-core + keyboard checks in Chrome
+npx @mintwork/wcag-audit-skill scan ./src --sarif -o a11y.sarif
 ```
 
 Each finding looks like:
@@ -80,7 +80,7 @@ What I focused on:
 It's also an agent skill (Claude Code, Codex, Cursor) that fixes what it finds, but the CLI
 stands alone. MIT. Keep your eslint a11y plugin; this complements it.
 
-https://github.com/ranjan-mohanty/wcag-audit-skill
+https://github.com/mintwork/wcag-audit-skill
 
 ---
 
@@ -114,4 +114,4 @@ Questions for this sub:
    fix patterns for custom widgets.
 3. What should the "needs a human" section of the report always include?
 
-Repo and rules list: https://github.com/ranjan-mohanty/wcag-audit-skill (MIT).
+Repo and rules list: https://github.com/mintwork/wcag-audit-skill (MIT).

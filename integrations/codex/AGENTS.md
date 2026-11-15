@@ -5,11 +5,11 @@
 All UI changes must be accessible. When you create or modify UI code (HTML, JSX/TSX, Vue,
 Svelte, Astro) or the user asks for an accessibility / a11y / WCAG audit:
 
-1. **Static scan** — `npx wcag-audit-skill scan <changed paths> --json --fail-on none`.
+1. **Static scan** — `npx @mintwork/wcag-audit-skill scan <changed paths> --json --fail-on none`.
    Also review what the scanner cannot see: shared components (`Button`, `IconButton`,
    `Input`, `Modal`), `outline: none` without a `:focus-visible` replacement, color-only state.
 2. **Runtime scan** — if the app runs locally, start it and run
-   `npx wcag-audit-skill scan http://localhost:<port>/<page> --json --fail-on none`.
+   `npx @mintwork/wcag-audit-skill scan http://localhost:<port>/<page> --json --fail-on none`.
 3. **Verify** — before fixing, open each finding's file:line and try to disprove it (trace
    props, spreads and parent components). Drop false positives; ask about anything you
    cannot establish (e.g. what an image conveys). Never invent alt text.
@@ -17,8 +17,8 @@ Svelte, Astro) or the user asks for an accessibility / a11y / WCAG audit:
    not placeholder, `alt=""` only for decorative images, `aria-label` on icon-only buttons with
    `aria-hidden="true"` on the icon. Do not change visual design (colors, copy) without asking.
    Explain each fix in one sentence: what was wrong, who it affected, what changed.
-5. **Re-check** — `npx wcag-audit-skill scan … --json -o /tmp/a11y.json` before fixing, then
-   `npx wcag-audit-skill verify /tmp/a11y.json` after. It exits non-zero if anything remains
+5. **Re-check** — `npx @mintwork/wcag-audit-skill scan … --json -o /tmp/a11y.json` before fixing, then
+   `npx @mintwork/wcag-audit-skill verify /tmp/a11y.json` after. It exits non-zero if anything remains
    or a fix introduced a new issue.
 6. **Report** — counts by severity, what you fixed, what needs the user's input, and what
    automation cannot check (screen-reader pass, zoom/reflow, captions accuracy).

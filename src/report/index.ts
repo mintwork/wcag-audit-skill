@@ -28,7 +28,7 @@ function locKey(f: Finding): string {
 export function where(f: Finding): string {
   const l = f.location;
   if (l.file) return `${l.file}:${l.line ?? 1}:${l.column ?? 1}`;
-  return `${l.url ?? ""} ${l.selector ? `[${l.selector}]` : ""}`.trim();
+  return `${l.url ?? ""} ${l.selector ? `[${l.selector}]` : ""}${l.state ? ` (state: ${l.state})` : ""}`.trim();
 }
 
 export function counts(findings: Finding[]): Record<Severity, number> {
@@ -40,10 +40,15 @@ export function counts(findings: Finding[]): Record<Severity, number> {
 export function formatText(results: ScanResult[]): string {
   const lines: string[] = [];
   for (const r of results) {
-    const head = r.kind === "static" ? `Static scan of ${r.target} (${r.filesScanned ?? 0} file${r.filesScanned === 1 ? "" : "s"})` : `Runtime scan of ${r.target}`;
+    const head =
+      r.kind === "static"
+        ? `Static scan of ${r.target} (${r.filesScanned ?? 0} file${r.filesScanned === 1 ? "" : "s"})`
+        : r.story
+          ? `Story ${r.story.title} / ${r.story.name} (${r.target})`
+          : `Runtime scan of ${r.target}${r.state ? ` (state: ${r.state.name})` : ""}`;
     lines.push(c("1", head));
     if (!r.findings.length) {
-      lines.push(c("32", "  ✓ No accessibility issues found by automated checks."));
+      lines.push(c("32", r.baselined ? "  ✓ No new accessibility issues (all findings are in the baseline)." : "  ✓ No accessibility issues found by automated checks."));
       lines.push("");
       continue;
     }
@@ -52,6 +57,7 @@ export function formatText(results: ScanResult[]): string {
       const crit = f.wcag.length ? f.wcag.map((w) => `${w} ${WCAG[w]?.title ?? ""}`.trim()).join(", ") : "best practice";
       lines.push(`  ${sev} ${c("1", f.ruleId)}  ${c("2", `WCAG ${crit} (${f.level})`)}`);
       lines.push(`           ${c("4", where(f))}`);
+      if (f.sourceHint) lines.push(`           ${c("2", "source (hint):")} ${f.sourceHint.file}:${f.sourceHint.line} ${c("2", `via ${f.sourceHint.via.join(", ")}`)}`);
       lines.push(`           ${f.message}`);
       lines.push(`           ${c("2", "evidence:")} ${f.evidence}`);
       lines.push(`           ${c("32", "fix:")} ${f.fix}`);
@@ -62,10 +68,12 @@ export function formatText(results: ScanResult[]): string {
   const all = results.flatMap((r) => r.findings);
   const n = counts(all);
   const discarded = results.reduce((s, r) => s + r.discarded, 0);
+  const baselined = results.reduce((s, r) => s + (r.baselined ?? 0), 0);
   lines.push(
     `${c(all.length ? "1" : "1;32", `${all.length} issue${all.length === 1 ? "" : "s"}`)}: ` +
       (Object.keys(n) as Severity[]).map((s) => c(n[s] ? SEV_COLOR[s] : "2", `${n[s]} ${s}`)).join(", ") +
-      (discarded ? c("2", ` (${discarded} unverified result${discarded === 1 ? "" : "s"} discarded)`) : ""),
+      (discarded ? c("2", ` (${discarded} unverified result${discarded === 1 ? "" : "s"} discarded)`) : "") +
+      (baselined ? c("2", ` (${baselined} known issue${baselined === 1 ? "" : "s"} in the baseline not shown)`) : ""),
   );
   lines.push(c("2", "Automated checks catch roughly 30–50% of WCAG issues. Manual and assistive-technology testing is still required."));
   return lines.join("\n");
@@ -77,7 +85,12 @@ export function formatJson(results: ScanResult[]): string {
     {
       version: 1,
       tool: results[0]?.tool,
-      summary: { total: all.length, ...counts(all), discarded: results.reduce((s, r) => s + r.discarded, 0) },
+      summary: {
+        total: all.length,
+        ...counts(all),
+        discarded: results.reduce((s, r) => s + r.discarded, 0),
+        ...(results.some((r) => r.baselined !== undefined) ? { baselined: results.reduce((s, r) => s + (r.baselined ?? 0), 0) } : {}),
+      },
       scans: results.map((r) => ({ ...r, findings: sortFindings(r.findings) })),
     },
     null,
@@ -147,9 +160,20 @@ export function formatSarif(results: ScanResult[]): string {
                 }
               : {
                   physicalLocation: { artifactLocation: { uri: f.location.url } },
-                  logicalLocations: [{ fullyQualifiedName: f.location.selector, kind: "element" }],
+                  logicalLocations: [{ fullyQualifiedName: f.location.state ? `${f.location.selector} (state: ${f.location.state})` : f.location.selector, kind: "element" }],
                 },
           ],
+          ...(f.sourceHint
+            ? {
+                relatedLocations: [
+                  {
+                    id: 1,
+                    physicalLocation: { artifactLocation: artifactFor(f.sourceHint.file), region: { startLine: Math.max(1, f.sourceHint.line) } },
+                    message: { text: `Possible source (hint, via ${f.sourceHint.via.join(", ")})` },
+                  },
+                ],
+              }
+            : {}),
           partialFingerprints: { "wcagAuditFinding/v1": f.id },
           properties: { wcag: f.wcag, severity: f.severity, confidence: f.confidence, verified: f.verified ?? f.confidence === "high" },
         })),

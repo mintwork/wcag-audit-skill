@@ -1,6 +1,6 @@
 {
-  "name": "wcag-audit-skill",
-  "version": "0.1.0",
+  "name": "@mintwork/wcag-audit-skill",
+  "version": "0.1.2",
   "description": "Accessibility (WCAG 2.2) audit skill for AI coding agents, plus a CLI: static source scan, real-browser runtime scan (Playwright + axe-core), verified findings, JSON and SARIF output.",
   "type": "module",
   "bin": {
@@ -35,7 +35,8 @@
     "demo:gif": "npm run build && node scripts/demo-gif.mjs",
     "test:watch": "vitest",
     "prepublishOnly": "npm test",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "build:agensi": "node scripts/build-agensi.mjs"
   },
   "keywords": [
     "accessibility",
@@ -64,10 +65,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ranjan-mohanty/wcag-audit-skill.git"
+    "url": "git+https://github.com/mintwork/wcag-audit-skill.git"
   },
-  "homepage": "https://github.com/ranjan-mohanty/wcag-audit-skill#readme",
+  "homepage": "https://github.com/mintwork/wcag-audit-skill#readme",
   "bugs": {
-    "url": "https://github.com/ranjan-mohanty/wcag-audit-skill/issues"
+    "url": "https://github.com/mintwork/wcag-audit-skill/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

@@ -20,6 +20,16 @@ export interface Location {
   url?: string;
   /** CSS selector for runtime findings. */
   selector?: string;
+  /** Runtime state the finding was seen in (e.g. "menu open", "dark"). */
+  state?: string;
+}
+
+/** Best-effort source location of a runtime finding (`--source`). A hint: verify before editing. */
+export interface SourceHint {
+  file: string;
+  line: number;
+  /** The handles that matched, e.g. ['data-testid="pay"', 'text "Pay now"']. */
+  via: string[];
 }
 
 export interface Finding {
@@ -44,6 +54,8 @@ export interface Finding {
   helpUrl?: string;
   /** Set by the verification phase. */
   verified?: boolean;
+  /** Runtime findings with --source: where the element probably comes from in the source. */
+  sourceHint?: SourceHint;
 }
 
 export interface ScanResult {
@@ -56,4 +68,10 @@ export interface ScanResult {
   findings: Finding[];
   /** Findings dropped during verification (not reproducible). */
   discarded: number;
+  /** Runtime only: the state the page was brought into before scanning (replayed by verify). */
+  state?: import("./runtime/states.js").RuntimeState;
+  /** Findings hidden because they are in the --baseline file. */
+  baselined?: number;
+  /** Storybook scans: the story, and the Storybook (URL or static build directory) it came from. */
+  story?: { id: string; title: string; name: string; source: string };
 }

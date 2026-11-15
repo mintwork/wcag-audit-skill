@@ -21,7 +21,7 @@ success criterion, carries evidence and a concrete fix, and is re-checked after 
   the fix: resolved, remaining, introduced.
 - **Machine-readable.** JSON findings with stable IDs and SARIF 2.1.0 for GitHub code scanning.
 - **Agent-agnostic.** Claude Code plugin, `npx skills add`, Codex/`AGENTS.md`, Cursor rules.
-- **CI-ready.** `uses: ranjan-mohanty/wcag-audit-skill@v0` runs the scan and uploads SARIF.
+- **CI-ready.** `uses: mintwork/wcag-audit-skill@v0` runs the scan and uploads SARIF.
 
 ## Field-tested
 
@@ -40,11 +40,11 @@ Measured on 10 real codebases (React/Next, Vue, SvelteKit, Astro, plain-HTML ext
 
 ```bash
 # Claude Code
-/plugin marketplace add ranjan-mohanty/wcag-audit-skill
+/plugin marketplace add mintwork/wcag-audit-skill
 /plugin install wcag-audit@wcag-audit-skill
 
 # Any skills-compatible agent
-npx skills add https://github.com/ranjan-mohanty/wcag-audit-skill --skill wcag-audit
+npx skills add https://github.com/mintwork/wcag-audit-skill --skill wcag-audit
 
 # CLI
 npx wcag-audit-skill scan ./src
@@ -53,7 +53,7 @@ npx wcag-audit-skill scan http://localhost:3000
 
 ```yaml
 # GitHub Actions
-- uses: ranjan-mohanty/wcag-audit-skill@v0
+- uses: mintwork/wcag-audit-skill@v0
   with:
     targets: src
     fail-on: serious

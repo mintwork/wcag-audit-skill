@@ -10,7 +10,7 @@ invisible focus.
 - Otherwise start the app: look at `package.json` scripts (`dev`, `start`, `preview`),
   README, `docker-compose.yml`. Start it **in the background**, wait until it responds
   (`curl -sf http://localhost:3000 >/dev/null`), and stop it when done.
-- Static sites: `npx wcag-audit-skill scan ./dist/index.html --runtime` opens the file in
+- Static sites: `npx @mintwork/wcag-audit-skill scan ./dist/index.html --runtime` opens the file in
   the browser directly.
 - Never scan production systems that the user did not name, and never submit real forms
   (orders, emails, payments) during an audit.
@@ -18,7 +18,7 @@ invisible focus.
 ## 2. Scan
 
 ```bash
-npx wcag-audit-skill scan http://localhost:3000 http://localhost:3000/signup \
+npx @mintwork/wcag-audit-skill scan http://localhost:3000 http://localhost:3000/signup \
   --json -o .wcag-audit/runtime.json --fail-on none
 ```
 
@@ -33,6 +33,16 @@ npx wcag-audit-skill scan http://localhost:3000 http://localhost:3000/signup \
 
 If no browser launches: `npx playwright install chromium` (or install Chrome).
 
+If the project has Storybook, scan every story too: it covers component states that no route
+shows (`npm run build-storybook` first, or a running `npm run storybook`):
+
+```bash
+npx @mintwork/wcag-audit-skill scan --storybook storybook-static --json -o .wcag-audit/storybook.json --fail-on none
+npx @mintwork/wcag-audit-skill scan --storybook http://localhost:6006 --stories button,forms/   # a subset
+```
+
+Map story findings to source through the story's `importPath` in `index.json`.
+
 ## 3. Cover states, not just pages
 
 A page's initial load is a fraction of its UI. For each primary flow, also check:
@@ -45,9 +55,36 @@ A page's initial load is a fraction of its UI. For each primary flow, also check
 - **Authenticated pages**: ask the user for a test account or a storage-state file;
   never guess credentials.
 
-The CLI scans one state per URL. For other states, either add a route/query param that
-renders them (e.g. Storybook stories: `http://localhost:6006/iframe.html?id=modal--open`)
-or drive the browser yourself (Playwright MCP / browser tool) and inspect with axe:
+Describe states in a JSON config and scan them all in one run. Every page is scanned in its
+default state, then in each global state (`states`) and its own (`pages[].states`). Steps are
+`click`, `fill` + `value`, `press` (+ optional `selector`), `hover`, `check`, `select` + `value`,
+`waitFor` and `wait` (ms); a state can also set `colorScheme`, `viewport` and `reducedMotion`.
+
+```json
+{
+  "baseUrl": "http://localhost:3000",
+  "states": [{ "name": "dark", "colorScheme": "dark" }, { "name": "320px", "viewport": { "width": 320, "height": 640 } }],
+  "pages": ["/", { "url": "/settings", "states": [
+    { "name": "dialog open", "steps": [{ "click": "#open-settings" }, { "waitFor": "[role=dialog]" }] },
+    { "name": "empty submit", "steps": [{ "click": "form button[type=submit]" }] }
+  ] }]
+}
+```
+
+```bash
+npx @mintwork/wcag-audit-skill scan --config .wcag-audit/config.json --json -o .wcag-audit/runtime.json --fail-on none
+```
+
+Findings carry `location.state`, and `verify` replays the state. Single-state flags work
+without a config: `--color-scheme dark`, `--viewport 320x640`.
+
+**Authentication:** never type real credentials. Ask the user for a Playwright storage-state
+file (`npx playwright codegen --save-storage=.auth/user.json http://localhost:3000/login`
+records one after they log in), then pass `--storage-state .auth/user.json` or set
+`"storageState"` in the config. Keep the file out of git.
+
+For anything a config can't express, drive the browser yourself (Playwright MCP / browser
+tool) and inspect with axe:
 
 ```js
 // in a browser tool: inject axe and run on the current state
@@ -65,6 +102,10 @@ hidden under a sticky header (2.4.11).
 
 ## 5. Map runtime findings back to source
 
-Each runtime finding has a CSS selector and the rendered HTML. Find the source by
-searching for distinctive class names, text, `data-testid`, or the component that renders
-that route. Record the source file and line on the finding — the fix happens in source.
+Each runtime finding has a CSS selector and the rendered HTML. Add `--source src` to the scan
+and the CLI searches the source for the element's test id, id, `aria-label` / `alt` /
+`placeholder`, project class names and short text, and adds `sourceHint: { file, line, via }`
+when one file clearly wins. It is a **hint**: open the file and confirm it renders that element
+(and which call site) before fixing. Without a hint, search yourself for distinctive class
+names, text or `data-testid`, or the component that renders that route. Record the source file
+and line on the finding — the fix happens in source.

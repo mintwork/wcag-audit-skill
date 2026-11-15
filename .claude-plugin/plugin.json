@@ -1,14 +1,21 @@
 {
   "name": "wcag-audit",
   "displayName": "WCAG Audit",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Audit web UIs for WCAG 2.2 accessibility failures in phases (static scan, real-browser scan, verification, fix, report) and fix them.",
   "author": {
-    "name": "ranjan-mohanty",
-    "url": "https://github.com/ranjan-mohanty"
+    "name": "mintwork",
+    "url": "https://github.com/mintwork"
   },
-  "homepage": "https://github.com/ranjan-mohanty/wcag-audit-skill#readme",
-  "repository": "https://github.com/ranjan-mohanty/wcag-audit-skill",
+  "homepage": "https://github.com/mintwork/wcag-audit-skill#readme",
+  "repository": "https://github.com/mintwork/wcag-audit-skill",
   "license": "MIT",
-  "keywords": ["accessibility", "a11y", "wcag", "axe-core", "audit", "sarif"]
+  "keywords": [
+    "accessibility",
+    "a11y",
+    "wcag",
+    "axe-core",
+    "audit",
+    "sarif"
+  ]
 }

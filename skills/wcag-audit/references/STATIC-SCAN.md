@@ -5,19 +5,23 @@ The CLI handles the mechanical checks. Your job in this phase is the review it c
 ## 1. Run the scanner
 
 ```bash
-npx wcag-audit-skill scan src --json -o .wcag-audit/static.json --fail-on none
-npx wcag-audit-skill rules            # what it checks
+npx @mintwork/wcag-audit-skill scan src --json -o .wcag-audit/static.json --fail-on none
+npx @mintwork/wcag-audit-skill rules            # what it checks
 ```
 
 Useful flags: `--ignore storybook,fixtures`, `--rules form-label,button-name`,
-`--min-confidence high`. The scanner skips `node_modules`, build output, tests and stories.
+`--min-confidence high`. If the project commits a baseline (`.wcag-audit/baseline.json`), audit
+without `--baseline` so known issues are reviewed too; CI uses it to fail only on new findings.
+The scanner skips `node_modules`, build output, tests and stories.
 
 Read the JSON, not just the summary. Group findings by component: ten `button-name`
 findings in ten pages often trace back to **one** `IconButton` component.
 
 ## 2. Map the component layer
 
-Most real-world a11y bugs live in shared components the scanner treats as opaque.
+Most real-world a11y bugs live in shared components. The scanner follows imports inside the
+project for form labels (thin `<Input>` wrappers, `<Field>` wrappers) and knows the label props
+of common design-system inputs; everything else about a component is opaque to it.
 
 1. Find the design-system / UI folder (`components/ui`, `src/lib/components`, `packages/ui`).
 2. For each primitive that renders an interactive element (`Button`, `IconButton`, `Link`,
@@ -31,7 +35,7 @@ Most real-world a11y bugs live in shared components the scanner treats as opaque
 
 ```bash
 rg -n "<IconButton(?![^>]*aria-label)(?![^>]*label=)" --pcre2 src
-rg -n "outline:\s*(none|0)" --glob '*.{css,scss,less,tsx,jsx,vue,svelte}' src
+rg -n "outline:\s*(none|0)" --glob '*.{ts,tsx,js,jsx}' src   # CSS-in-JS; stylesheets are scanned
 rg -n "onClick=" src | rg -v "<(button|a|input|select|summary|[A-Z])"
 ```
 
@@ -39,7 +43,7 @@ rg -n "onClick=" src | rg -v "<(button|a|input|select|summary|[A-Z])"
 
 | Pattern | WCAG | What to check |
 | --- | --- | --- |
-| `outline: none` / `outline: 0` / Tailwind `outline-none`, `focus:outline-none` | 2.4.7 | Is there a replacement `:focus-visible` style (`ring`, `box-shadow`, border)? |
+| `outline: none` in CSS-in-JS (styled-components, emotion), or in a stylesheet whose replacement lives in another file | 2.4.7 | The scanner checks `.css` / `.scss` / `.less`, `<style>` and Tailwind classes (`focus-outline-removed`), one stylesheet at a time. Is there a replacement `:focus-visible` style (`ring`, `box-shadow`, border)? |
 | Color-only state (red border = error, green dot = online) | 1.4.1 | Is there text, an icon with a name, or `aria-invalid` + message? |
 | Form errors | 3.3.1, 4.1.3 | Error text linked via `aria-describedby`; `aria-invalid="true"`; announced (`role="alert"` or live region) |
 | Custom select / combobox / menu / tabs | 4.1.2, 2.1.1 | Matches the ARIA APG pattern: roles, `aria-expanded`, arrow keys, Escape |
@@ -64,12 +68,18 @@ rg -n "onClick=" src | rg -v "<(button|a|input|select|summary|[A-Z])"
   empty. `v-html` content is invisible to static analysis; scan it at runtime.
 - **Svelte**: Svelte's compiler already emits `a11y-*` warnings — run `npx svelte-check`
   and treat its a11y warnings as candidates too.
-- **Angular**: `[attr.aria-label]` for ARIA bindings; `(click)` on non-buttons is the most
-  common failure. `@angular/cdk/a11y` provides `FocusTrap` and `LiveAnnouncer`.
+- **Angular**: `.component.html` and inline `template:` strings are scanned. `[attr.aria-label]`
+  for ARIA bindings; `(click)` on non-buttons is the most common failure. Elements with
+  attribute directives (`ngCombobox`, `cdkMenuItem`) are skipped by the fake-button rules:
+  check what the directive adds. `@angular/cdk/a11y` provides `FocusTrap` and `LiveAnnouncer`.
 - **Astro**: frontmatter is skipped; framework islands (`.tsx`, `.vue`, `.svelte`) are
   scanned by their own parsers.
+- **MDX**: JSX blocks and Markdown headings / links / images are scanned; components used in
+  MDX (`<Callout>`, `<Video>`) are opaque, so check their definitions. Fenced code is skipped.
 - **Tailwind**: `sr-only` for hidden labels; `focus-visible:ring-2` as the focus style;
-  check `text-gray-400` on white (fails 4.5:1).
+  `tailwind-contrast` checks `text-*` on `bg-*` only when both are static default-palette
+  classes. Review pairs it skips: `cn()` / `clsx()` classes, theme colors (`text-muted-foreground`),
+  `dark:` variants and opacity.
 
 Record each manual candidate with `source: "static"`, the file and line, and
 `confidence: "medium"` until Phase 3 confirms it.

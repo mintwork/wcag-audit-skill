@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Hostile ids</title>
+<style>
+  body { font: 16px sans-serif; color: #000; background: #fff; }
+  button { outline: none; border: 2px solid #000; background: #fff; color: #000; margin: 20px; padding: 8px; }
+  button.ring:focus-visible { outline: 3px solid #000; outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Element ids that would break code built by string concatenation</h1>
+  <button id='q"uote\back'>One</button>
+  <button id="x'),window.__pwned=1,('">Two</button>
+  <button class="ring" id="&lt;/script&gt;`${window.__pwned=1}`">Three</button>
+</main>
+</body>
+</html>

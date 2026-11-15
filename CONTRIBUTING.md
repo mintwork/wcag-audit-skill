@@ -66,7 +66,7 @@ Regenerate it when the text output changes. Never record real projects or third-
 
 ## Releasing
 
-Versions follow semver. The GitHub Action is consumed as `ranjan-mohanty/wcag-audit-skill@v0`,
+Versions follow semver. The GitHub Action is consumed as `mintwork/wcag-audit-skill@v0`,
 so every release gets an immutable `vX.Y.Z` tag and the major tag `v0` is moved to it. The
 [release workflow](.github/workflows/release.yml) does the npm publish and the tag move when a
 GitHub Release is published. The action builds the CLI from the tagged source, so tags must point
@@ -87,9 +87,10 @@ at commits where `npm ci && npm run build` works.
    Never move or delete a `vX.Y.Z` tag once pushed. A breaking change to action inputs or
    outputs needs a new major tag (`v1`): change it in the release workflow first.
 
-**npm auth:** the workflow uses [npm trusted publishing](https://docs.npmjs.com/trusted-publishers)
-(configure `ranjan-mohanty/wcag-audit-skill` + `release.yml` on the package's npm settings page),
-or an `NPM_TOKEN` repository secret as a fallback. A version already on npm is skipped.
+**npm auth:** [trusted publishing](https://docs.npmjs.com/trusted-publishers) only; no npm token
+is stored in the repository. npm accepts publishes of this package only from `release.yml` in
+`mintwork/wcag-audit-skill` (set under the package's Settings → Trusted Publisher on npmjs.com). A version
+already on npm is skipped, and manual runs of the workflow are dry runs.
 
 ## Commits and PRs
 
@@ -102,3 +103,12 @@ or an `NPM_TOKEN` repository secret as a fallback. A version already on npm is s
 Docs and examples should model good practice: descriptive link text, alt text on images,
 tables with headers. If you spot something in this repo that is itself inaccessible, that's
 a bug — please report it.
+
+## Publishing to Agensi
+
+[Agensi](https://agensi.io) has no API or CI publishing, so every GitHub Release gets a
+ready-to-upload package attached (`*-agensi.zip`, built by `npm run build:agensi`). The build adds
+Agensi's listing fields (`version`, `summary`, `tags`, `docs_url`) to the packaged `SKILL.md` only
+and checks Agensi's limits (100 files, 5 MB, text only). To publish or update the listing, either
+upload the ZIP in Agensi's Creator Studio, or ask an agent connected to Agensi to `update_skill`
+from it.
