@@ -19,12 +19,15 @@ conveyed by color alone; errors are tied to fields with `aria-describedby`.
 ## 2. Runtime scan
 If a dev server is running, run `npx @mintwork/wcag-audit-skill scan http://localhost:<port>/<page> --json --fail-on none`.
 It uses axe-core in a real browser plus Tab-key checks for keyboard traps and invisible focus.
+Add `--source src` for source hints, `--config <file>` for states (open modal, dark mode, 320px),
+`--storage-state <file>` for logged-in pages and `--storybook <url|dir>` to scan every story.
 
 ## 3. Verify every finding
 Open the reported file:line. Try to disprove it: trace props, spreads, slots and parents.
 Confirmed → fix. Unclear (alt text meaning, unreachable state) → ask the user. Disproved → drop.
 
 ## 4. Fix (always, also when writing new UI)
+- Mechanical findings (`html-lang`, `meta-viewport-zoom`, `aria-*` typos): `scan <path> --dry-run`, show the diff, then `--fix`.
 - Native elements first: `<button type="button">` for actions, `<a href>` for navigation. Never `<div onClick>`.
 - Every input has a `<label htmlFor>` (or wrapping `<label>`); placeholder is not a label.
 - Images: meaningful `alt`; `alt=""` only if decorative. Never `alt="image"`. Don't invent content — ask.

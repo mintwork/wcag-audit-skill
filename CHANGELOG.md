@@ -8,44 +8,14 @@ within a minor line.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-15
+
 ### Added
 
-- **Source hints for runtime findings** (`--source <dir>`): each runtime finding is searched for in the source by
-  its test id (`data-testid`, `data-cy`, …), id, `aria-label` / `alt` / `placeholder` / `name`, project class names
-  (not utility classes) and short text. When one file clearly wins, the finding gets
-  `sourceHint: { file, line, via }`, shown in text output and as a SARIF related location. Best effort: verify it.
-- **Storybook integration**: `scan --storybook <url|dir>` scans every story of a running Storybook or a static
-  build. It reads `index.json` (7+) or `stories.json` (6.x), skips docs entries, opens each story's iframe in one
-  browser and excludes Storybook's own UI from axe. `--stories a,b` limits it to stories whose id or title
-  contains a pattern. Finding ids come from the story id (stable across ports); `verify` re-scans the story.
-- **Angular inline templates**: `template:` strings in `@Component({...})` are scanned in `.ts` files, with line
-  and column numbers in the `.ts` source. Other TypeScript files are skipped and not counted.
-- **Multi-state runtime scans** (`scan --config <file>`): a JSON config lists pages and states; each page is
-  scanned in its default state and in every state, all in one browser. States set `colorScheme`, `viewport`,
-  `reducedMotion` and run steps (`click`, `fill`, `press`, `hover`, `check`, `select`, `waitFor`, `wait`) to open a
-  modal or submit an empty form first. Findings carry `location.state`, their ids include the state, and `verify`
-  replays it. `--color-scheme` and `--viewport WxH` set a single state without a config.
-- **Authenticated scans** with a Playwright storage state: `--storage-state <file>` or `"storageState"` in the config.
-- **`--fix` and `--dry-run`** for mechanical findings: `html-lang` (repairs `en_US`, `English`; adds a missing
-  `lang` only with `--lang <code>`), `meta-viewport-zoom` (drops `user-scalable=no` / low `maximum-scale`) and
-  unambiguous `aria-attr-valid` typos. A unified diff is always printed before files are written; `--dry-run`
-  prints it and writes nothing. Exported as `planFixes`, `writeFixes`, `fixSource` and `unifiedDiff`.
-- **Labels resolved across files** (`form-label`): components imported from the project are looked up through
-  relative imports, tsconfig / jsconfig `paths` and workspace packages. A thin wrapper that forwards its props to
-  one `<input>` / `<select>` / `<textarea>` (shadcn's `<Input>`) is checked at each call site, and an imported
-  `<Field>` wrapper whose `<label>` is not associated is reported, both at medium confidence.
-- **Design-system inputs** (`form-label`, medium confidence): MUI `<TextField>` without `label`, antd `<Input>`
-  outside `<Form.Item label>`, Mantine, Chakra, React Aria, HeroUI, React Bootstrap, Fluent UI and Headless UI
-  inputs without their label prop or wrapper.
-- **MDX files** (`.mdx`) are scanned: JSX and HTML elements and `{expressions}`, plus Markdown headings, links
-  and images, so `heading-order`, `link-name`, `link-text-vague` and image rules apply to docs pages.
-  Frontmatter, ESM blocks and fenced code are skipped; line numbers match the source.
-- **CSS analysis** (`focus-outline-removed`, WCAG 2.4.7): the static scan now reads `.css`, `.scss` and `.less`
-  files and `<style>` blocks (HTML, Vue, Svelte, Astro), and reports `outline: none` / `outline: 0` on focus or
-  focusable selectors when no focus style in the same stylesheet replaces it. It also reports Tailwind
-  `outline-none` / `focus:outline-none` on focusable elements without a `focus:` / `focus-visible:` ring,
-  outline, border or shadow class (or a `focus-within:` wrapper, `group-focus` / `peer-focus` indicator). Text
-  fields, `tabindex="-1"`, composite widgets, components and the `:focus:not(:focus-visible)` pattern are skipped.
+- **Baseline file**: `scan --write-baseline` records the current findings in `.wcag-audit/baseline.json`
+  (or the `--baseline <file>` path); `scan --baseline <file>` then reports and fails only on findings that
+  are not in it. Matching uses the stable finding ids. A `--json` report also works as a baseline. The JSON
+  summary gains `baselined`, and the GitHub Action a `baseline` input.
 - **Five new static rules**, each mapped to WCAG 2.2 and documented in `references/RULES.md`:
   - `autocomplete-valid` (1.3.5): invalid `autocomplete` values, with the intended token for typos and
     common aliases (`emial` → `email`, `firstname` → `given-name`, `work name` → `name`).
@@ -54,17 +24,52 @@ within a minor line.
   - `duplicate-id-ref` (1.3.1, 4.1.2): duplicate ids that a `<label for>` or `aria-*` reference points to.
   - `tailwind-contrast` (1.4.3, medium confidence): `text-*` on `bg-*` classes below 4.5:1 (3:1 for large
     text), when both colors are known from Tailwind's default palette (v3 and v4) or arbitrary hex values.
-- **Baseline file**: `scan --write-baseline` records the current findings in `.wcag-audit/baseline.json`
-  (or the `--baseline <file>` path); `scan --baseline <file>` then reports and fails only on findings that
-  are not in it. Matching uses the stable finding ids. A `--json` report also works as a baseline. The JSON
-  summary gains `baselined`, and the GitHub Action a `baseline` input.
+- **CSS analysis** (`focus-outline-removed`, WCAG 2.4.7): the static scan now reads `.css`, `.scss` and `.less`
+  files and `<style>` blocks (HTML, Vue, Svelte, Astro), and reports `outline: none` / `outline: 0` on focus or
+  focusable selectors when no focus style in the same stylesheet replaces it. It also reports Tailwind
+  `outline-none` / `focus:outline-none` on focusable elements without a `focus:` / `focus-visible:` ring,
+  outline, border or shadow class (or a `focus-within:` wrapper, `group-focus` / `peer-focus` indicator). Text
+  fields, `tabindex="-1"`, composite widgets, components and the `:focus:not(:focus-visible)` pattern are skipped.
+- **MDX files** (`.mdx`) are scanned: JSX and HTML elements and `{expressions}`, plus Markdown headings, links
+  and images, so `heading-order`, `link-name`, `link-text-vague` and image rules apply to docs pages.
+  Frontmatter, ESM blocks and fenced code are skipped; line numbers match the source.
+- **Design-system inputs** (`form-label`, medium confidence): MUI `<TextField>` without `label`, antd `<Input>`
+  outside `<Form.Item label>`, Mantine, Chakra, React Aria, HeroUI, React Bootstrap, Fluent UI and Headless UI
+  inputs without their label prop or wrapper.
+- **Labels resolved across files** (`form-label`): components imported from the project are looked up through
+  relative imports, tsconfig / jsconfig `paths` and workspace packages. A thin wrapper that forwards its props to
+  one `<input>` / `<select>` / `<textarea>` (shadcn's `<Input>`) is checked at each call site, and an imported
+  `<Field>` wrapper whose `<label>` is not associated is reported, both at medium confidence.
+- **`--fix` and `--dry-run`** for mechanical findings: `html-lang` (repairs `en_US`, `English`; adds a missing
+  `lang` only with `--lang <code>`), `meta-viewport-zoom` (drops `user-scalable=no` / low `maximum-scale`) and
+  unambiguous `aria-attr-valid` typos. A unified diff is always printed before files are written; `--dry-run`
+  prints it and writes nothing. Exported as `planFixes`, `writeFixes`, `fixSource` and `unifiedDiff`.
+- **Authenticated scans** with a Playwright storage state: `--storage-state <file>` or `"storageState"` in the config.
+- **Multi-state runtime scans** (`scan --config <file>`): a JSON config lists pages and states; each page is
+  scanned in its default state and in every state, all in one browser. States set `colorScheme`, `viewport`,
+  `reducedMotion` and run steps (`click`, `fill`, `press`, `hover`, `check`, `select`, `waitFor`, `wait`) to open a
+  modal or submit an empty form first. Findings carry `location.state`, their ids include the state, and `verify`
+  replays it. `--color-scheme` and `--viewport WxH` set a single state without a config.
+- **Angular inline templates**: `template:` strings in `@Component({...})` are scanned in `.ts` files, with line
+  and column numbers in the `.ts` source. Other TypeScript files are skipped and not counted.
+- **Storybook integration**: `scan --storybook <url|dir>` scans every story of a running Storybook or a static
+  build. It reads `index.json` (7+) or `stories.json` (6.x), skips docs entries, opens each story's iframe in one
+  browser and excludes Storybook's own UI from axe. `--stories a,b` limits it to stories whose id or title
+  contains a pattern. Finding ids come from the story id (stable across ports); `verify` re-scans the story.
+- **Source hints for runtime findings** (`--source <dir>`): each runtime finding is searched for in the source by
+  its test id (`data-testid`, `data-cy`, …), id, `aria-label` / `alt` / `placeholder` / `name`, project class names
+  (not utility classes) and short text. When one file clearly wins, the finding gets
+  `sourceHint: { file, line, via }`, shown in text output and as a SARIF related location. Best effort: verify it.
 
 ### Changed
 
+- The static scan now has **30 rules** (24 in 0.1.x).
 - Fewer false positives in component-library templates: `no-div-button` and `interactive-role-keyboard` skip
   elements with Angular attribute directives (`<div ngCombobox>`), `no-div-button` skips click handlers on content
   inside an element with an interactive role (`<li role="option"><div (click)>`), and `button-name` treats a
   `label="…"` attribute on `<button>` (`<button pButton label>`) as a name.
+- The JSX/TSX parser is now **Babel 8** (`@babel/parser` 8.1.2). Findings on real-world React, MDX and Angular
+  projects are identical to 0.1.x, with no new parse errors.
 
 ### Fixed
 
@@ -138,7 +143,8 @@ First public release.
 - Capture-phase handlers recognized; `onClickCapture` containers are not reported as fake buttons.
 - Inputs whose bound `type` is a choice of text-like literals are checked.
 
-[Unreleased]: https://github.com/mintwork/wcag-audit-skill/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/mintwork/wcag-audit-skill/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/mintwork/wcag-audit-skill/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/mintwork/wcag-audit-skill/releases/tag/v0.1.2
 [0.1.1]: https://github.com/mintwork/wcag-audit-skill/releases/tag/v0.1.1
 [0.1.0]: https://github.com/mintwork/wcag-audit-skill/releases/tag/v0.1.0

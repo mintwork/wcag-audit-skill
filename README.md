@@ -86,7 +86,7 @@ The skill ([`skills/wcag-audit/SKILL.md`](skills/wcag-audit/SKILL.md)) gives the
 
 | Phase | What happens | Output |
 | --- | --- | --- |
-| **1. Static scan** | CLI parses HTML, JSX/TSX, Vue, Svelte, Astro, MDX and CSS and checks 30 rules. The agent then reviews what tools miss: shared components, focus styles in CSS-in-JS, color-only state. | `.wcag-audit/static.json` |
+| **1. Static scan** | CLI parses HTML (including Angular templates), JSX/TSX, Vue, Svelte, Astro, MDX and CSS and checks 30 rules. The agent then reviews what tools miss: shared components, focus styles in CSS-in-JS, color-only state. | `.wcag-audit/static.json` |
 | **2. Runtime scan** | Starts your dev server, opens pages in real Chromium, runs **axe-core**, and **tabs through the page** to catch keyboard traps and invisible focus. | `.wcag-audit/runtime.json` |
 | **3. Verification** | Each candidate is re-checked to *disprove* it: trace props and spreads, check the rendered DOM. Verdict: `confirmed`, `needs_validation`, or `rejected`. Runtime violations are re-run automatically and dropped if they don't reproduce. | verdicts |
 | **4. Fix** | Minimal, native-HTML-first fixes in your framework's idiom, each explained (what was wrong, who it affected, what changed). Visual/copy changes need your OK. Never invents alt text. | diffs + `verify` |
@@ -95,7 +95,7 @@ The skill ([`skills/wcag-audit/SKILL.md`](skills/wcag-audit/SKILL.md)) gives the
 ## CLI
 
 ```bash
-npx @mintwork/wcag-audit-skill scan ./src                        # static: HTML / JSX / TSX / Vue / Svelte / Astro / MDX / CSS
+npx @mintwork/wcag-audit-skill scan ./src                        # static: HTML / JSX / TSX / Vue / Svelte / Astro / MDX / CSS / Angular
 npx @mintwork/wcag-audit-skill scan http://localhost:3000        # runtime: axe-core + keyboard checks in Chromium
 npx @mintwork/wcag-audit-skill scan ./dist/index.html --runtime  # open a local file in the browser
 npx @mintwork/wcag-audit-skill scan ./src --json -o a11y.json    # machine-readable
@@ -106,23 +106,29 @@ npx @mintwork/wcag-audit-skill rules                             # list rules + 
 
 | Option | |
 | --- | --- |
+| **Output** | |
+| `--json` / `--sarif` / `-o, --output <file>` | machine-readable findings / SARIF 2.1.0; write to a file instead of stdout |
+| **Filtering & CI** | |
 | `--fail-on <sev>` | exit 1 at `critical`/`serious`/`moderate`/`minor` (default `minor`) or `none` |
 | `--min-confidence <c>` | drop findings below `high`/`medium` |
 | `--rules a,b` / `--ignore dir,dir` | select rules / skip directories |
-| `--fix` / `--dry-run` | fix mechanical findings in place, always printing the diff first; `--dry-run` only prints it (see [Fixing](#fixing-mechanical-findings)) |
-| `--lang <code>` | with `--fix`: add `lang="<code>"` to `<html>` that has none |
 | `--baseline <file>` | report and fail only on findings not in the baseline (see [Baseline](#baseline-fail-only-on-new-findings)) |
 | `--write-baseline` | record the current findings in the `--baseline` file (default `.wcag-audit/baseline.json`) and exit 0 |
-| `--level A\|AA\|AAA` | runtime WCAG level (default `AA`) |
+| **Fixing (static)** | |
+| `--fix` / `--dry-run` | fix mechanical findings in place, always printing the diff first; `--dry-run` only prints it (see [Fixing](#fixing-mechanical-findings)) |
+| `--lang <code>` | with `--fix`: add `lang="<code>"` to `<html>` that has none |
+| **Runtime** | |
+| `--runtime` | open a local `.html` file in the browser instead of scanning its source |
+| `--level A\|AA\|AAA` | WCAG level for axe-core (default `AA`) |
 | `--best-practice` | add axe best-practice rules |
 | `--wait-for <selector>` | SPA readiness |
 | `--config <file>` | scan pages × states from a JSON config (see [Runtime states](#runtime-states)) |
 | `--storage-state <file>` | Playwright storage state (cookies, localStorage) for authenticated pages |
 | `--color-scheme dark\|light` / `--viewport 320x640` | one-off state without a config |
 | `--storybook <url\|dir>` / `--stories a,b` | scan every story of a running Storybook or a static build (`storybook-static/`); `--stories` filters by id / title |
-| `--source <dir>` | runtime: add a `sourceHint` (file:line, best effort) to each finding by searching `<dir>` for its test id, id, labels, class names and text |
+| `--source <dir>` | add a `sourceHint` (file:line, best effort) to each runtime finding by searching `<dir>` for its test id, id, labels, class names and text |
 | `--no-keyboard` / `--no-verify` | skip Tab traversal / skip the verification re-run |
-| `--browser chrome\|msedge` | browser channel (auto-detects Playwright Chromium, Chrome, Edge) |
+| `--browser chrome\|msedge` / `--headed` / `--timeout <ms>` | browser channel (auto-detects Playwright Chromium, Chrome, Edge) / show the window / navigation timeout (default 30000) |
 
 Exit codes: `0` clean, `1` findings at or above `--fail-on`, `2` usage or runtime error.
 
@@ -226,13 +232,24 @@ Findings appear as PR annotations and under **Security → Code scanning**. Or u
 
 ```yaml
       - uses: actions/checkout@v7
-      - uses: mintwork/wcag-audit-skill@v0   # moving major tag; pin @v0.1.0 or a commit SHA for strict reproducibility
+      - uses: mintwork/wcag-audit-skill@v0   # moving major tag; pin @v0.2.0 or a commit SHA for strict reproducibility
         with:
           targets: src
           fail-on: serious
+          baseline: .wcag-audit/baseline.json   # optional: fail only on new findings
 ```
 
-Inputs: `targets`, `fail-on`, `sarif-file`, `upload-sarif`, `baseline` (path to a committed baseline file: only new findings are reported and fail the step), `args`, `version` (empty = the action's own ref; set an npm version to run the published package). A runtime job (start app → scan URLs) is in [`examples/github-action.yml`](examples/github-action.yml); the action itself is [`action.yml`](action.yml).
+| Input | Default | |
+| --- | --- | --- |
+| `targets` | `.` | space-separated paths and/or URLs to scan |
+| `fail-on` | `serious` | fail the step at this severity or above (`critical`, `serious`, `moderate`, `minor`, `none`) |
+| `sarif-file` | `wcag-audit.sarif` | where to write the SARIF report |
+| `upload-sarif` | `true` | upload it to code scanning (needs `security-events: write`) |
+| `baseline` | | committed baseline file ([`--write-baseline`](#baseline-fail-only-on-new-findings)): only new findings are reported and fail the step |
+| `args` | | extra CLI arguments, e.g. `--ignore storybook --min-confidence medium` |
+| `version` | | empty: run the CLI from the action's own ref; or an npm version to run the published package |
+
+Output: `exit-code` (0 clean, 1 findings at or above `fail-on`, 2 error) and `sarif-file`. A runtime job (start app → scan URLs) is in [`examples/github-action.yml`](examples/github-action.yml); the action itself is [`action.yml`](action.yml).
 
 ## Rules
 
@@ -283,8 +300,8 @@ Full reference: [`skills/wcag-audit/references/RULES.md`](skills/wcag-audit/refe
 
 ## How is this different from…
 
-- **eslint-plugin-jsx-a11y / vuejs-accessibility** — great linters, one framework each, no runtime, no fixes. This covers HTML/React/Vue/Svelte/Astro with one tool, adds a real browser, and drives an agent to *fix and verify*. Keep your linter too.
-- **axe / Lighthouse** — runtime only, no source locations, no fixes. This uses axe-core under the hood and maps results back to source in Phase 2.
+- **eslint-plugin-jsx-a11y / vuejs-accessibility** — great linters, one framework each, no runtime, no fixes. This covers HTML, React, Vue, Svelte, Astro, Angular, MDX and CSS with one tool, adds a real browser, and drives an agent to *fix and verify*. Keep your linter too.
+- **axe / Lighthouse** — runtime only, no source locations, no fixes. This uses axe-core under the hood, adds keyboard checks and page states, and maps results back to source (`--source`, then the agent confirms it in Phase 2).
 - **"Make it accessible" in a prompt** — unverifiable. This produces evidence for every finding and re-runs the checks after fixing.
 
 ## Honest limits
@@ -303,22 +320,15 @@ Measured on 10 real codebases (React/Next, Vue, SvelteKit, Astro, plain-HTML ext
 | Runtime (axe) | same violations as raw axe-core on every page; the re-run drops transient nodes (e.g. a toast removed mid-scan) |
 | `focus-visible` | pixel-verified: 4 medium-confidence findings, all real (the style-only check had reported 64, 4 of them real) |
 | `keyboard-trap` | 0 findings on 7 real pages (no false alarms) |
+| 0.2 rules and file types | hand-checked on 13 more OSS frontends: the new rules 22/25 clear true positives and 0 false positives; `focus-outline-removed` 12/23 true, 2 false positives (cross-file replacements, medium confidence); cross-file `form-label` 39/40 true; Angular inline templates 30/35 true; MDX 0 false positives; `--source` hints always in the right file |
 
 Known gaps: form labels are followed into imported project components, but other names and labels that come from component props in another file (a button's `label` prop, an icon's `title`) are invisible to the static scan (the runtime scan sees them).
 
 ## Roadmap
 
-- [x] MDX files (JSX and HTML blocks, plus Markdown headings, links and images; code blocks are skipped)
-- [x] Resolving labels across files: imported `<Field>` wrappers, thin `<Input>` components, MUI `<TextField label>` and other design-system inputs
-- [x] Rules: `autocomplete-valid` (1.3.5), `label-in-name` (2.5.3), `table-headers`, `duplicate-id-ref`, `tailwind-contrast` (Tailwind contrast from class names)
-- [x] CSS analysis: `outline: none` without `:focus-visible` replacement (2.4.7) in `.css` / `.scss` / `.less`, `<style>` blocks and Tailwind classes (`focus-outline-removed`)
-- [x] Angular templates: `.component.html` files and inline `template:` strings in `@Component` (`.ts`)
-- [x] Multi-state runtime scans from a config file (open modal, submit empty form, dark mode, 320px): `--config`
-- [x] Authenticated scans via Playwright storage state: `--storage-state`
-- [x] Map runtime findings back to source, as a hint (`--source <dir>`: test ids, ids, labels, class names, text). Source maps / React DevTools: not yet
-- [x] `--fix` / `--dry-run` for mechanical rules (`html-lang`, `meta-viewport-zoom`, `aria-attr-valid` typos)
-- [x] Baseline file to fail CI only on new findings (`--baseline`, `--write-baseline`, action input `baseline`)
-- [x] Storybook integration: scan every story (`--storybook <url|dir>`)
+- [ ] Map runtime findings to source through source maps / React DevTools (today: `--source` hints from test ids, ids, labels, class names and text)
+
+Shipped features are in the [CHANGELOG](CHANGELOG.md).
 
 Have an idea or a false positive? [Open an issue](CONTRIBUTING.md) with a minimal snippet.
 

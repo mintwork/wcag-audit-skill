@@ -1,7 +1,7 @@
 {
   "name": "wcag-audit",
   "displayName": "WCAG Audit",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Audit web UIs for WCAG 2.2 accessibility failures in phases (static scan, real-browser scan, verification, fix, report) and fix them.",
   "author": {
     "name": "mintwork",

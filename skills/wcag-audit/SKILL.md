@@ -1,10 +1,10 @@
 ---
 name: wcag-audit
-description: Audits web UIs for WCAG 2.2 accessibility (a11y) failures and fixes them. Runs a phased procedure (static source scan of HTML/JSX/TSX/Vue/Svelte/Astro/MDX, real-browser runtime scan with axe-core and keyboard checks, adversarial verification of every finding, minimal fixes with explanations, and a machine-readable report). Use when the user asks to audit, check, review or fix accessibility, a11y, WCAG, ADA, Section 508 or EN 301 549 compliance, screen reader or keyboard support, color contrast, alt text, labels or focus, or before shipping UI the agent generated.
+description: Audits web UIs for WCAG 2.2 accessibility (a11y) failures and fixes them. Runs a phased procedure (static source scan of HTML/JSX/TSX/Vue/Svelte/Astro/MDX/Angular/CSS, real-browser runtime scan with axe-core and keyboard checks, adversarial verification of every finding, minimal fixes with explanations, and a machine-readable report). Use when the user asks to audit, check, review or fix accessibility, a11y, WCAG, ADA, Section 508 or EN 301 549 compliance, screen reader or keyboard support, color contrast, alt text, labels or focus, or before shipping UI the agent generated.
 license: MIT. LICENSE has complete terms
 compatibility: Requires Node.js 22+ for the bundled CLI (npx @mintwork/wcag-audit-skill). The runtime phase needs a Chromium browser (Playwright Chromium, Chrome or Edge) and a reachable URL. Works without the CLI in degraded, manual mode.
 metadata:
-  version: "0.1.2"
+  version: "0.2.0"
   standard: "WCAG 2.2 AA"
 ---
 
@@ -60,6 +60,9 @@ component) phases can be brief, but do not skip Phase 3.
 npx @mintwork/wcag-audit-skill scan <path> --json -o .wcag-audit/static.json --fail-on none
 ```
 
+Audit without `--baseline` even if the project commits one (`.wcag-audit/baseline.json`): the
+baseline only lets CI ignore known findings, and they still need review.
+
 Then read [references/STATIC-SCAN.md](references/STATIC-SCAN.md) and do the review the tool
 cannot: custom components that wrap native elements, conditional rendering, design-system
 props (`<Icon label=…>`), focus styles removed in CSS-in-JS or replaced in another stylesheet
@@ -82,8 +85,11 @@ Scan the pages that matter (home, primary flows, forms, modals open) — see
 [references/RUNTIME-SCAN.md](references/RUNTIME-SCAN.md) for states to cover, SPA waits
 and auth. Put states (open a modal, submit an empty form, dark mode, 320px) in a config and
 run `scan --config .wcag-audit/config.json`; for logged-in pages use `--storage-state <file>`
-from the user, never credentials. Runtime findings catch what static analysis cannot: computed contrast, real
-accessible names, focus order, keyboard traps, invisible focus.
+from the user, never credentials. If the project has Storybook, also run
+`scan --storybook storybook-static` (or the running Storybook URL) to cover every component
+state. Each runtime finding's `sourceHint` is a search result: confirm it before fixing there.
+Runtime findings catch what static analysis cannot: computed contrast, real accessible
+names, focus order, keyboard traps, invisible focus.
 
 ### Phase 3 — Verification (remove false positives)
 

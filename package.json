@@ -1,6 +1,6 @@
 {
   "name": "@mintwork/wcag-audit-skill",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Accessibility (WCAG 2.2) audit skill for AI coding agents, plus a CLI: static source scan, real-browser runtime scan (Playwright + axe-core), verified findings, JSON and SARIF output.",
   "type": "module",
   "bin": {

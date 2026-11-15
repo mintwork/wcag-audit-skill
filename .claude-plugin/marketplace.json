@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Accessibility (WCAG 2.2) audit-and-fix skill for coding agents",
-    "version": "0.1.2"
+    "version": "0.2.0"
   },
   "plugins": [
     {
