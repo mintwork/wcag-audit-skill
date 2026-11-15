@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Storybook</title>
+  <style>
+    body { font-family: system-ui, sans-serif; color: #1a1a1a; background: #fff; }
+    :focus-visible { outline: 3px solid #1a5fb4; outline-offset: 2px; }
+    button { min-width: 44px; min-height: 44px; }
+  </style>
+</head>
+<body>
+  <!-- Storybook's own UI: excluded from the scan. -->
+  <div class="sb-wrapper"><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" width="20" height="20"></div>
+  <div id="storybook-root"></div>
+  <script>
+    // A stand-in for Storybook's preview: render the story named in ?id=.
+    const stories = {
+      "button--primary": '<button type="button">Save</button>',
+      "button--icon-only": '<button type="button"><svg width="16" height="16" aria-hidden="true"><rect width="16" height="16"/></svg></button>',
+      "forms-signup--default": '<form><input type="text" name="email"><button type="submit">Sign up</button></form>',
+    };
+    const id = new URLSearchParams(location.search).get("id");
+    setTimeout(() => { document.getElementById("storybook-root").innerHTML = stories[id] || ""; }, 50);
+  </script>
+</body>
+</html>

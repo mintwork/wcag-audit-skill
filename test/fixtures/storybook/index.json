@@ -1,0 +1,9 @@
+{
+  "v": 5,
+  "entries": {
+    "button--docs": { "type": "docs", "id": "button--docs", "title": "Button", "name": "Docs", "importPath": "./Button.mdx" },
+    "button--primary": { "type": "story", "id": "button--primary", "title": "Button", "name": "Primary", "importPath": "./Button.stories.tsx" },
+    "button--icon-only": { "type": "story", "id": "button--icon-only", "title": "Button", "name": "Icon only", "importPath": "./Button.stories.tsx" },
+    "forms-signup--default": { "type": "story", "id": "forms-signup--default", "title": "Forms/Signup", "name": "Default", "importPath": "./Signup.stories.tsx" }
+  }
+}

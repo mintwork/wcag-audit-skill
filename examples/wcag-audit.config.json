@@ -1,0 +1,20 @@
+{
+  "baseUrl": "http://localhost:3000",
+  "storageState": ".auth/user.json",
+  "waitFor": "main",
+  "states": [
+    { "name": "dark", "colorScheme": "dark" },
+    { "name": "320px", "viewport": { "width": 320, "height": 640 } }
+  ],
+  "pages": [
+    "/",
+    {
+      "url": "/settings",
+      "states": [
+        { "name": "dialog open", "steps": [{ "click": "#open-settings" }, { "waitFor": "[role=dialog]" }] },
+        { "name": "empty submit", "steps": [{ "click": "form button[type=submit]" }] }
+      ]
+    },
+    { "url": "/search", "states": [{ "name": "results", "steps": [{ "fill": "input[type=search]", "value": "shoes" }, { "press": "Enter" }, { "wait": 500 }] }] }
+  ]
+}

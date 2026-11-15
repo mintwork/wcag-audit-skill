@@ -33,6 +33,16 @@ npx @mintwork/wcag-audit-skill scan http://localhost:3000 http://localhost:3000/
 
 If no browser launches: `npx playwright install chromium` (or install Chrome).
 
+If the project has Storybook, scan every story too: it covers component states that no route
+shows (`npm run build-storybook` first, or a running `npm run storybook`):
+
+```bash
+npx @mintwork/wcag-audit-skill scan --storybook storybook-static --json -o .wcag-audit/storybook.json --fail-on none
+npx @mintwork/wcag-audit-skill scan --storybook http://localhost:6006 --stories button,forms/   # a subset
+```
+
+Map story findings to source through the story's `importPath` in `index.json`.
+
 ## 3. Cover states, not just pages
 
 A page's initial load is a fraction of its UI. For each primary flow, also check:
@@ -45,9 +55,36 @@ A page's initial load is a fraction of its UI. For each primary flow, also check
 - **Authenticated pages**: ask the user for a test account or a storage-state file;
   never guess credentials.
 
-The CLI scans one state per URL. For other states, either add a route/query param that
-renders them (e.g. Storybook stories: `http://localhost:6006/iframe.html?id=modal--open`)
-or drive the browser yourself (Playwright MCP / browser tool) and inspect with axe:
+Describe states in a JSON config and scan them all in one run. Every page is scanned in its
+default state, then in each global state (`states`) and its own (`pages[].states`). Steps are
+`click`, `fill` + `value`, `press` (+ optional `selector`), `hover`, `check`, `select` + `value`,
+`waitFor` and `wait` (ms); a state can also set `colorScheme`, `viewport` and `reducedMotion`.
+
+```json
+{
+  "baseUrl": "http://localhost:3000",
+  "states": [{ "name": "dark", "colorScheme": "dark" }, { "name": "320px", "viewport": { "width": 320, "height": 640 } }],
+  "pages": ["/", { "url": "/settings", "states": [
+    { "name": "dialog open", "steps": [{ "click": "#open-settings" }, { "waitFor": "[role=dialog]" }] },
+    { "name": "empty submit", "steps": [{ "click": "form button[type=submit]" }] }
+  ] }]
+}
+```
+
+```bash
+npx @mintwork/wcag-audit-skill scan --config .wcag-audit/config.json --json -o .wcag-audit/runtime.json --fail-on none
+```
+
+Findings carry `location.state`, and `verify` replays the state. Single-state flags work
+without a config: `--color-scheme dark`, `--viewport 320x640`.
+
+**Authentication:** never type real credentials. Ask the user for a Playwright storage-state
+file (`npx playwright codegen --save-storage=.auth/user.json http://localhost:3000/login`
+records one after they log in), then pass `--storage-state .auth/user.json` or set
+`"storageState"` in the config. Keep the file out of git.
+
+For anything a config can't express, drive the browser yourself (Playwright MCP / browser
+tool) and inspect with axe:
 
 ```js
 // in a browser tool: inject axe and run on the current state
